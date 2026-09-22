@@ -1,0 +1,16 @@
+name: doris-warehousing-course
+
+services:
+  doris:
+    image: apache/doris:all-in-one-4.1.3
+    ports:
+      - "127.0.0.1:52030:9030"
+      - "127.0.0.1:51030:8030"
+      - "127.0.0.1:51040:8040"
+    volumes:
+      - fe-meta:/opt/apache-doris/fe/doris-meta
+      - be-storage:/opt/apache-doris/be/storage
+
+volumes:
+  fe-meta:
+  be-storage:

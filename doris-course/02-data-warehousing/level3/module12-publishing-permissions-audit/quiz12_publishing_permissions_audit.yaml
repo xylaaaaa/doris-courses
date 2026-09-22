@@ -1,0 +1,73 @@
+title: 'Module 12: Publishing, permissions, and audit'
+description: Five single-choice questions; no database connection required.
+questions:
+- id: q1
+  objective: define an owner and consumer contract for a published data product
+  prompt: What should a published data product define first?
+  options:
+  - id: a
+    text: A. Owner, grain, freshness, consumers, and contract
+  - id: b
+    text: B. Only a chart color
+  - id: c
+    text: C. Only a storage path
+  - id: d
+    text: D. Only a user password
+  answer: a
+  explanation: It needs an owner, grain, freshness, consumers, and a reviewed contract.
+- id: q2
+  objective: use roles and grants to give consumers only the required table privilege
+  prompt: How should a BI reader receive access?
+  options:
+  - id: a
+    text: A. Make the user an administrator
+  - id: b
+    text: B. Share the root password
+  - id: c
+    text: C. Grant SELECT through a dedicated role
+  - id: d
+    text: D. Disable authentication
+  answer: c
+  explanation: Grant only the required object privilege through a role.
+- id: q3
+  objective: distinguish database privileges from administrative privileges
+  prompt: Which statement is correct?
+  options:
+  - id: a
+    text: A. All grants have the same risk
+  - id: b
+    text: B. Data access and administrative privileges are different
+  - id: c
+    text: C. SELECT automatically grants DROP
+  - id: d
+    text: D. A role cannot hold table privileges
+  answer: b
+  explanation: Object-level SELECT is different from administrative privileges.
+- id: q4
+  objective: inspect grants and record an audit trail for a release
+  prompt: What is useful audit evidence for a release?
+  options:
+  - id: a
+    text: A. Only the SQL client version
+  - id: b
+    text: B. Only the row count
+  - id: c
+    text: C. Only the dashboard URL
+  - id: d
+    text: D. Identity, object, privilege, reason, and release evidence
+  answer: d
+  explanation: Record identity, object, privilege, reason, and release identifier.
+- id: q5
+  objective: revoke access without changing the published data product
+  prompt: What does revoking a role change?
+  options:
+  - id: a
+    text: A. Consumer authorization, not the data product itself
+  - id: b
+    text: B. Every row in the table
+  - id: c
+    text: C. The table grain
+  - id: d
+    text: D. The storage engine
+  answer: a
+  explanation: It changes access while leaving the published data object unchanged.

@@ -1,0 +1,76 @@
+title: 'Module 9: Warehouse modeling and joins'
+description: Five single-choice questions; no database connection required.
+questions:
+- id: q1
+  objective: state the grain of a fact and a dimension table
+  prompt: What should be written down before choosing a join key?
+  options:
+  - id: a
+    text: A. The business meaning of one row in each input
+  - id: b
+    text: B. Only the expected query latency
+  - id: c
+    text: C. The number of dashboard colors
+  - id: d
+    text: D. The FE hostname
+  answer: a
+  explanation: The grain states what one row represents; without it, duplicate matches
+    and wrong totals are easy to miss.
+- id: q2
+  objective: choose a table model and key from update semantics
+  prompt: Which design fits a customer dimension with one current row per customer?
+  options:
+  - id: a
+    text: A. Duplicate Key on an event timestamp
+  - id: b
+    text: B. Aggregate Key on customer name
+  - id: c
+    text: C. Unique Key on customer_id
+  - id: d
+    text: D. Random distribution with no key
+  answer: c
+  explanation: A Unique Key model with customer_id represents current state and supports
+    upserts.
+- id: q3
+  objective: validate one-to-one and one-to-many join cardinality
+  prompt: What can a duplicate dimension key do to an order total?
+  options:
+  - id: a
+    text: A. It always removes the fact
+  - id: b
+    text: B. It changes only the column name
+  - id: c
+    text: C. It has no effect on aggregate results
+  - id: d
+    text: D. It can multiply rows and inflate totals
+  answer: d
+  explanation: A one-to-many match can multiply fact rows and inflate aggregates.
+- id: q4
+  objective: use LEFT JOIN and anti-join checks to find missing dimensions
+  prompt: Which query pattern finds facts with no matching dimension?
+  options:
+  - id: a
+    text: A. INNER JOIN and WHERE right_key IS NOT NULL
+  - id: b
+    text: B. LEFT JOIN and WHERE right_key IS NULL
+  - id: c
+    text: C. GROUP BY without a join
+  - id: d
+    text: D. ORDER BY the dimension name
+  answer: b
+  explanation: A left join followed by a null right key is an anti-join check.
+- id: q5
+  objective: read join distribution evidence from EXPLAIN
+  prompt: Why inspect EXPLAIN for a join?
+  options:
+  - id: a
+    text: A. To read join type, conditions, and distribution evidence
+  - id: b
+    text: B. To prove business keys are unique
+  - id: c
+    text: C. To replace result validation
+  - id: d
+    text: D. To avoid defining a grain
+  answer: a
+  explanation: The plan shows join conditions and likely data movement; a small local
+    runtime is not sufficient evidence.

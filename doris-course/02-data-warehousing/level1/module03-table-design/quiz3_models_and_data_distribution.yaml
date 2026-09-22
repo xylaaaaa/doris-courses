@@ -1,0 +1,73 @@
+title: "Module 3: Model semantics, partitioning, and bucketing"
+description: "Five single-choice questions; no database connection required. View explanations after submitting."
+questions:
+- id: q1
+  objective: "Predict the results of the same input in the Duplicate, Unique, and Aggregate models."
+  prompt: "With the same key design and no Sequence column, write (1,2300), (1,2250), and (2,405) in order, waiting for each write to succeed and become visible before the next. The Aggregate amount column declares SUM. Which result is correct?"
+  options:
+  - id: a
+    text: "A. All three models retain the latest amount of 2250 for order 1"
+  - id: b
+    text: "B. Duplicate retains three rows; order 1 is 2250 in Unique and 4550 in Aggregate"
+  - id: c
+    text: "C. Duplicate rejects duplicate keys; order 1 is 2250 in Unique and 4550 in Aggregate"
+  - id: d
+    text: "D. Duplicate retains three rows; order 1 has the larger amount of 2300 in Unique and 4550 in Aggregate"
+  answer: b
+  explanation: "A: Different models have different write semantics; they cannot all be interpreted as replacing data with the latest snapshot. B: Correct. Duplicate retains detail records, Unique retains the later value under the sequential-write conditions in this question, and Aggregate accumulates values using SUM. C: Duplicate Key uses keys for sorting, not for rejecting duplicate business keys. D: Unique does not automatically select the largest amount; the amount is not declared as a version here. Nor does 4550 represent the current order amount."
+- id: q2
+  objective: "Choose logical keys and table models for detail records, current state, or aggregate metrics."
+  prompt: "How should you choose keys when both current state and distinct business events must be retained?"
+  options:
+  - id: a
+    text: "A. Use order_id as the unique key for both the current-state table and event history"
+  - id: b
+    text: "B. Use event_id as the unique key for the current-state table and order_id for event history"
+  - id: c
+    text: "C. Use order_id as the unique key for the current-state table and a stable event_id for event history"
+  - id: d
+    text: "D. Use order_id as the unique key for the current-state table and generate a new event_id for every redelivery in event history"
+  answer: c
+  explanation: "A: Multiple events for the same order overwrite each other, preventing complete history retention. B: The current-state table retains multiple event rows, while history loses earlier events for the same order. C: Correct. Current state has one row per order, and history has one row per distinct event; redeliveries of the same event still use the original ID. D: A new ID disguises a duplicate delivery as a new business event, breaking event deduplication."
+- id: q3
+  objective: "Distinguish the roles of partitions, buckets, sort keys, and business unique keys."
+  prompt: "Which statement about partitions, buckets, sort keys, and business unique keys is correct?"
+  options:
+  - id: a
+    text: "A. Partitions manage ranges, buckets manage distribution, sort keys manage ordering, and business unique keys identify objects"
+  - id: b
+    text: "B. Partitioning by date automatically makes the same order ID unique across the entire table"
+  - id: c
+    text: "C. Bucketing by order_id automatically removes duplicate records with the same order ID"
+  - id: d
+    text: "D. Declaring order_id as a Duplicate Key causes duplicate orders to be rejected on write"
+  answer: a
+  explanation: "A: Correct. The four design choices have different roles and must be combined according to the business grain, not substituted for each other. B: Date partitioning is not a global business uniqueness constraint; key design still requires separate consideration. C: Hash bucketing determines data distribution, not business deduplication semantics. D: Duplicate Key does not enforce uniqueness; replacement or aggregation depends on the table model."
+- id: q4
+  objective: "Use EXPLAIN to compare scan ranges with date filters and bucket-key filters."
+  prompt: "In a date-partitioned table with HASH(order_id), what should you focus on when adding an order_id equality filter to a date filter?"
+  options:
+  - id: a
+    text: "A. Look only at the final number of returned rows and treat it as the scan volume"
+  - id: b
+    text: "B. Look only at the total bucket count specified at table creation and assume every query scans all Tablets"
+  - id: c
+    text: "C. Compare only whether the plan text is identical word for word, without analyzing the ranges corresponding to the filters"
+  - id: d
+    text: "D. Compare the selected partitions and Tablet ranges, distinguishing date pruning from bucket pruning"
+  answer: d
+  explanation: "A: Returned rows are not scanned rows, nor do they indicate how many shards were read. B: Applicable filters can prune partitions and Tablets; the total bucket count does not equal the scan range for every query. C: Plan representations may change across versions; understand the selected ranges rather than comparing word for word. D: Correct. Date conditions and order_id equality conditions let you observe the two types of pruning separately."
+- id: q5
+  objective: "Verify results using both detail records and amounts, without equating plan pruning with performance gains."
+  prompt: "Two full snapshots of order 701 have amounts of 800 and 760. The SUM model produces 1560, and the new plan scans fewer Tablets. How should you evaluate this?"
+  options:
+  - id: a
+    text: "A. 1560 is the current order amount because the SUM calculation reported no error"
+  - id: b
+    text: "B. Fewer Tablets already prove that the new query has a shorter actual response time"
+  - id: c
+    text: "C. Verify the snapshot semantics first, then test actual performance under the same workload"
+  - id: d
+    text: "D. A stable total amount is enough to go live; snapshots and query duration can be checked later"
+  answer: c
+  explanation: "A: Full snapshots should use versions to determine the current value; adding them changes the metric definition. B: Pruning is plan evidence; actual duration still requires execution testing. C: Correct. Business correctness and performance must be validated separately. D: A stable result with an incorrect metric definition is not a basis for going live."

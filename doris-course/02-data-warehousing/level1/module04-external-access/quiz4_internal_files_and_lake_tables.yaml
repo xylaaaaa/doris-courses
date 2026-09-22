@@ -1,0 +1,73 @@
+title: "Module 4: Joining lake tables and internal tables"
+description: "Five single-choice questions; no database connection required. View explanations after submitting."
+questions:
+- id: q1
+  objective: "Distinguish Doris internal tables, Parquet files, Iceberg tables, and External Catalogs."
+  prompt: "What is the relationship between Parquet, Iceberg, and an External Catalog?"
+  options:
+  - id: a
+    text: "A. Parquet is a file format, Iceberg manages table metadata and data files, and a Catalog provides an external access entry point"
+  - id: b
+    text: "B. A directory containing only Parquet files already constitutes an Iceberg table"
+  - id: c
+    text: "C. Creating an External Catalog copies external data into Doris internal tables"
+  - id: d
+    text: "D. After an External Catalog is created, Doris takes over file organization and transactions for external tables"
+  answer: a
+  explanation: "A: Correct. File formats, lake table formats, and access entry points are different layers. B: Iceberg also requires table metadata; a data-file directory alone is not enough to identify an Iceberg table. C: A Catalog establishes an access entry point; it does not mean data has been loaded or automatically copied. D: Establishing an access entry point does not transfer responsibility for managing external tables; you still need to understand the external system's metadata and transaction boundaries."
+- id: q2
+  objective: "Choose between direct external queries and loading into internal tables based on exploration and repeated-analysis needs."
+  prompt: "Historical orders already exist in the lake. What is a reasonable starting point when exploring a question for the first time?"
+  options:
+  - id: a
+    text: "A. Migrate the entire data lake before starting the first analytical query"
+  - id: b
+    text: "B. Evaluate direct external queries first, then assess loading and refresh costs for repeated analysis"
+  - id: c
+    text: "C. Run INSERT INTO SELECT once, then treat the internal results as automatically synchronized data"
+  - id: d
+    text: "D. Materialize orders and all dimensions into a wide table before performing any join analysis"
+  answer: b
+  explanation: "A: Exploration does not necessarily require a full migration; evaluate access paths to existing data first. B: Correct. Solve the current problem first, then decide whether to materialize based on performance, freshness, and cost. C: A one-time load saves only the current results; continuous synchronization requires a separate design. D: Doris supports multi-table joins; prebuilding a wide table is not necessary for every scenario."
+- id: q3
+  objective: "Explain how Catalog, Database, and Table identify an external table."
+  prompt: "What do the three parts of wwi_lake.sales.orders represent?"
+  options:
+  - id: a
+    text: "A. Object-storage bucket, file directory, data file"
+  - id: b
+    text: "B. Doris cluster, compute node, data shard"
+  - id: c
+    text: "C. Database, Schema, column name"
+  - id: d
+    text: "D. Catalog, Database, Table"
+  answer: d
+  explanation: "A: A SQL table name is not a physical file path in object storage. B: The SQL object hierarchy differs from the physical hierarchy of nodes and shards. C: In this course's three-part Doris table names, the first part is the Catalog and the last part is a table, not a column. D: Correct. The lab uses the fully qualified table name returned by the setup step; the example name is not guaranteed to exist."
+- id: q4
+  objective: "Identify duplicate dimension records or missing matches by comparing results before and after a join."
+  prompt: "After a LEFT JOIN with customers, 100 lake orders become 103 rows and the total amount increases. What is the most appropriate next step?"
+  options:
+  - id: a
+    text: "A. Check for multiple matches on customer join keys and verify the affected orders"
+  - id: b
+    text: "B. Switch to INNER JOIN to guarantee that each order matches exactly once"
+  - id: c
+    text: "C. Apply DISTINCT to all results and use the deduplicated amount directly in reports"
+  - id: d
+    text: "D. Change SUM to AVG to avoid adding duplicate amounts"
+  answer: a
+  explanation: "A: Correct. Multiple matching rows on the right multiply orders on the left; locate the join keys and detail records involved. B: INNER JOIN does not eliminate multiple matches and may also lose unmatched orders. C: DISTINCT does not guarantee the correct business grain; duplicates with different field values remain. D: Average amount and total amount are different metrics."
+- id: q5
+  objective: "With an Iceberg environment available, verify the same batch of orders through direct queries, joins, and after loading."
+  prompt: "How can you demonstrate that direct-query and loaded results in this lab are consistent?"
+  options:
+  - id: a
+    text: "A. Confirm that the external query succeeds and the internal table exists, then assume the data is consistent"
+  - id: b
+    text: "B. Compare row counts and total amounts without checking order identifiers or other fields"
+  - id: c
+    text: "C. Verify row counts, amounts, and join results for the same ten-order sample, and compare data field by field before and after loading"
+  - id: d
+    text: "D. Compare whether external and internal query durations are similar and infer consistent results from the timing"
+  answer: c
+  explanation: "A: A successful query and an existing table prove accessibility, not content consistency. B: Missing rows, duplicates, and incorrect amounts can cancel each other out; checking totals alone is insufficient. C: Correct. Expect ten orders and 12220.60, plus a complete field-by-field comparison to confirm that customer, date, amount, and other fields match for each order. D: Duration reflects execution performance, not whether business results are the same."

@@ -1,0 +1,55 @@
+{
+  "version": "dw-v1",
+  "files": {
+    "business_events.json": {
+      "bytes": 2746,
+      "sha256": "6a70bad9eb58f7e78394e08bd5ea4d3e65427e1777b8350eadbed6200fbb2d25"
+    },
+    "deliveries.json": {
+      "bytes": 3054,
+      "sha256": "6f8e8e57b297c4246e9edccb008c871735b11b1b31636978e94d346d99689656"
+    },
+    "expected_current.json": {
+      "bytes": 3491,
+      "sha256": "1e09493e290cfd52e54dc5c4a82248ab2890546b35314ce14fecc57142ffff12"
+    },
+    "expected_summary.json": {
+      "bytes": 375,
+      "sha256": "622e8662168d350444ae36a339d13a1e6d9aae728512aec493f035eece5b04d4"
+    },
+    "orders.json": {
+      "bytes": 3170,
+      "sha256": "ae284b0d73f7deef0d4ca6387f5e82eb4a456eddf18c22740d4f751c5ef964fc"
+    },
+    "raw_orders.json": {
+      "bytes": 4442,
+      "sha256": "19ae8af97ed39eadccec491a6b4d71c14d6d1239ea7283406b9493476c5d621c"
+    },
+    "malformed_orders.csv": {
+      "bytes": 176,
+      "sha256": "bc6b7b12163c598b6f4075730e074c5763201f2772b73f41a3bd1e0e91994c2c"
+    },
+    "orders.csv": {
+      "bytes": 847,
+      "sha256": "b63ac5008dede92e55803e2d39415763ea57ae4b6c4be2803cc3094322ce1b19"
+    },
+    "orders_reordered.csv": {
+      "bytes": 179,
+      "sha256": "c864e8ba33d35d8f46c225b2095378696b49da9cb3b89c04e229f42ddf4e2c6f"
+    },
+    "wwi-core.tar.gz": {
+      "bytes": 10508150,
+      "sha256": "acc85802f47ff4f76e33762be0767dbcc09d1f1ce11192c6a29933702ca72321"
+    },
+    "sample.json": {
+      "bytes": 10599,
+      "sha256": "0505294641a71107abf6e3d5148fb6f3c3f994f7d9ef915a79b0ec506b9c6b61"
+    }
+  },
+  "source": {
+    "bucket": "doris-regression-hk",
+    "prefix": "regression/datalake/pipeline_data/doris-course/data-warehousing/v1",
+    "endpoint": "https://oss-cn-hongkong.aliyuncs.com",
+    "region": "cn-hongkong"
+  }
+}

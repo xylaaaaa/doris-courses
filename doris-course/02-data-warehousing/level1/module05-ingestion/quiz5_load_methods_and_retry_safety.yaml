@@ -1,0 +1,73 @@
+title: "Module 5: Batch loading, failures, and retries"
+description: "Five single-choice questions; no database connection required. View explanations after submitting."
+questions:
+- id: q1
+  objective: "Choose ingestion paths for local files, object storage, message streams, and database changes."
+  prompt: "Which paths should you consider for a finite local CSV batch and a Kafka Topic that continuously produces messages, respectively?"
+  options:
+  - id: a
+    text: "A. Use Routine Load for CSV; export Kafka messages to files and consider continuous ingestion complete"
+  - id: b
+    text: "B. Use Stream Load for CSV; use Stream Load once for Kafka and wait for automatic consumption"
+  - id: c
+    text: "C. Create an External Catalog for both CSV and Kafka and continuously load through the Catalog"
+  - id: d
+    text: "D. Use Stream Load for CSV and Routine Load for continuous Kafka consumption"
+  answer: d
+  explanation: "A: Routine Load in this course targets Kafka; exporting messages to a one-off file does not establish continuous consumption. B: One Stream Load is one pushed batch, not an automatically created Kafka consumption job. C: A Catalog provides external access, not a universal continuous load job for every source. D: Correct. The client pushes local batches, while a continuous job maintains Kafka consumption progress."
+- id: q2
+  objective: "Explain the roles of CSV column mappings, Parquet fields, and default values."
+  prompt: "Which statement correctly describes field interpretation for this course's headerless CSV and WWI Parquet files?"
+  options:
+  - id: a
+    text: "A. CSV specifies a separator and columns mapping; Parquet aligns file fields with course DDL"
+  - id: b
+    text: "B. A headerless CSV can infer field meanings from values without checking column order"
+  - id: c
+    text: "C. Like CSV, Parquet requires splitting each row by commas to interpret fields"
+  - id: d
+    text: "D. Default a missing payment state to PAID to ensure field completeness"
+  answer: a
+  explanation: "A: Correct. The course CSV uses positional mappings. Parquet carries structural information, but fields must still match the target schema. B: Positions in a headerless file do not automatically convey business meaning; an incorrect column order can yield type-valid but semantically wrong data. C: Parquet is a schema-bearing columnar format, not text rows split by separators. D: Defaults need a business basis and cannot invent payment facts from missing fields."
+- id: q3
+  objective: "Judge correctness using load responses, loaded row counts, relationships, and amounts."
+  prompt: "A 100-row load returns HTTP 200, with JSON Status=Success, NumberLoadedRows=98, and NumberFilteredRows=2. The task requires retaining all orders. What should you do?"
+  options:
+  - id: a
+    text: "A. Deliver the report based on Success; the database has handled the two filtered rows"
+  - id: b
+    text: "B. Investigate filtering and missing orders, repair according to the retry strategy, then verify"
+  - id: c
+    text: "C. Immediately resend the entire file with a new label, ignoring the 98 rows already written"
+  - id: d
+    text: "D. Complete business verification as long as amounts from the existing 98 rows can be aggregated"
+  answer: b
+  explanation: "A: A successful load job does not establish business completeness. B: Correct. Locate filtered rows and verify target results, then choose recovery through backfilling, rebuilding, or another appropriate method. C: A new label creates a new batch and may append already-written data again in a detail table. D: Aggregation does not prove order completeness or correct customer references."
+- id: q4
+  objective: "Distinguish load-batch retries, business-event deduplication, and continuous-job recovery."
+  prompt: "In this course's off_mode loading, the result of a file request is uncertain. How should batch retries differ from business deduplication?"
+  options:
+  - id: a
+    text: "A. Generate a new label and resend the same file; avoiding conflicts with the original request guarantees no duplicates"
+  - id: b
+    text: "B. Permanently submit different files with the same label so it automatically deduplicates all business events"
+  - id: c
+    text: "C. Retain batch identity within the label's retention period and check the original result; use separate stable keys and versions for business events"
+  - id: d
+    text: "D. Once Kafka offsets advance, assume the current order state and other tables are all correctly updated"
+  answer: c
+  explanation: "A: A new label may append the same batch again; confirm the original transaction state first. B: Labels have a retention period and identify load batches, not universal business deduplication keys for different files. C: Correct. Batch identity, business-event identity, and recovery position have distinct roles; cases such as Publish Timeout require checking the original result first. D: Consumption progress cannot replace out-of-order version resolution, business verification, or cross-table recovery checks."
+- id: q5
+  objective: "Distinguish the grain and measurement definitions of WWI historical orders, account receipts, and new orders simulated for the course."
+  prompt: "Which statement correctly describes WWI order lines, customer account receipts, and this course's simulated orders?"
+  options:
+  - id: a
+    text: "A. Every order line has an order ID, so line counts can directly serve as order counts"
+  - id: b
+    text: "B. Customer account receipts are negative, so they can be counted directly as order refunds"
+  - id: c
+    text: "C. Simulated orders use WWI customers and products, so their payments are also real history"
+  - id: d
+    text: "D. Aggregate lines by order, do not force account receipts into per-order allocations, and mark simulated sources separately"
+  answer: d
+  explanation: "A: An order may have multiple product lines, so row counts must be interpreted at their actual grain. B: Negative receipts in this dataset represent account receipts, not evidence of per-order refunds. C: Referencing real sample dimensions does not turn generated payments, refunds, and regions into original historical facts. D: Correct. Identify the grain and source of orders, account transactions, and COURSE_SIMULATION separately to avoid mixing measurement definitions."

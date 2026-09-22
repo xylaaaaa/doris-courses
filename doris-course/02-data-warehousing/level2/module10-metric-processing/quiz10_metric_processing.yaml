@@ -1,0 +1,78 @@
+title: 'Module 10: Metric processing and service delivery'
+description: Five single-choice questions; no database connection required.
+questions:
+- id: q1
+  objective: define a metric with numerator, denominator, grain, and filter
+  prompt: What must a metric contract state?
+  options:
+  - id: a
+    text: A. Only a display title
+  - id: b
+    text: B. Only the dashboard refresh interval
+  - id: c
+    text: C. Grain, inputs, filters, and calculation
+  - id: d
+    text: D. Only the SQL engine version
+  answer: c
+  explanation: A metric is reproducible only when its grain, inputs, filters, and
+    calculation are explicit.
+- id: q2
+  objective: separate detail facts from an aggregate serving table
+  prompt: Why create an aggregate serving table?
+  options:
+  - id: a
+    text: A. To delete the detail facts
+  - id: b
+    text: B. To serve repeated metrics at a declared grain
+  - id: c
+    text: C. To hide all source errors
+  - id: d
+    text: D. To make joins unnecessary in every query
+  answer: b
+  explanation: It can provide a stable, efficient serving grain while detail facts
+    remain available for drill-down and reconciliation.
+- id: q3
+  objective: validate metrics against an independent detail query
+  prompt: How should an aggregate table be accepted?
+  options:
+  - id: a
+    text: A. Reconcile its values against an independent detail query
+  - id: b
+    text: B. Check only that INSERT succeeded
+  - id: c
+    text: C. Check only physical bucket count
+  - id: d
+    text: D. Trust the dashboard screenshot
+  answer: a
+  explanation: Compare counts and amounts with an independent detail aggregation before
+    publishing it.
+- id: q4
+  objective: use windows and conditional aggregation without changing grain accidentally
+  prompt: What does a window function normally do?
+  options:
+  - id: a
+    text: A. Always deletes duplicate rows
+  - id: b
+    text: B. Always creates a new table
+  - id: c
+    text: C. Always changes a daily metric to a monthly metric
+  - id: d
+    text: D. Adds a calculation while preserving the input row grain
+  answer: d
+  explanation: It adds a calculation to existing rows; it does not automatically collapse
+    them into groups.
+- id: q5
+  objective: publish a narrow serving query for a dashboard consumer
+  prompt: Why expose a narrow serving query?
+  options:
+  - id: a
+    text: A. To expose every physical column
+  - id: b
+    text: B. To prevent validation
+  - id: c
+    text: C. To limit consumer coupling to reviewed metric fields
+  - id: d
+    text: D. To guarantee zero refresh cost
+  answer: c
+  explanation: A narrow contract limits coupling and makes dashboard columns and semantics
+    reviewable.

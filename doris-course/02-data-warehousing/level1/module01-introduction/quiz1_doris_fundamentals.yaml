@@ -1,0 +1,73 @@
+title: "Module 1: Connect to Doris and Query Your First Orders"
+description: "Five single-choice questions; no database connection required. View explanations after submitting."
+questions:
+- id: q1
+  objective: "Distinguish between completing a transaction and analyzing a batch of orders."
+  prompt: "Which of the following is primarily analytical work?"
+  options:
+  - id: a
+    text: "A. Submit an order and deduct inventory in the same business operation"
+  - id: b
+    text: "B. Scan a batch of orders and calculate order counts and total amounts by date"
+  - id: c
+    text: "C. Look up an order's current address for a user to confirm and change"
+  - id: d
+    text: "D. Record a payment result and update that order's status"
+  answer: b
+  explanation: "A: Placing an order and deducting inventory completes a transaction, not cross-order analysis. B: Correct. Scanning and summarizing multiple orders by date is analytics, even if only a few rows are returned. C: Using SELECT does not necessarily mean analytics; this point lookup serves a transaction. D: An operation involving multiple fields or tables does not necessarily constitute analytical work either."
+- id: q2
+  objective: "Explain Doris's role between business databases and analytics users."
+  prompt: "How do Doris and the source business system work together in this course?"
+  options:
+  - id: a
+    text: "A. The source system handles transactions, while Doris receives business data and provides queries for analytics users"
+  - id: b
+    text: "B. After connecting with the MySQL protocol, all transaction designs from the source business database can be reused directly"
+  - id: c
+    text: "C. Doris only stores data; report computations must still run in the source business database"
+  - id: d
+    text: "D. Once the Doris connection is configured, subsequent changes to source business tables synchronize continuously"
+  answer: a
+  explanation: "A: Correct. The source system continues to process transactions, while Doris handles analytics in this course. B: Protocol compatibility does not imply identical transaction semantics, features, or suitable workloads. C: Doris itself provides analytical computation and queries; it is not merely a passive copy of the source business database. D: A connection only establishes access; continuous synchronization still requires ingestion tasks and the corresponding configuration."
+- id: q3
+  objective: "Explain the responsibilities of Frontend (FE) and Backend (BE) in a storage-compute integrated environment."
+  prompt: "Which division of responsibilities is correct in this course's storage-compute integrated environment?"
+  options:
+  - id: a
+    text: "A. FE stores metadata and performs detail scans, while BE only persists files"
+  - id: b
+    text: "B. The client splits the distributed execution plan, and FE forwards each fragment to BE"
+  - id: c
+    text: "C. FE stores internal table data, while BE caches hot data and returns query results"
+  - id: d
+    text: "D. FE receives SQL and plans and coordinates queries, while BE stores internal table data and executes the plan"
+  answer: d
+  explanation: "A: FE manages metadata, but BE performs detail scans and computation in this section. B: The client submits SQL; FE generates and coordinates the distributed plan. C: This confuses metadata with user table data; BE stores internal table data in a storage-compute integrated environment. D: Correct. This is the division of responsibilities in this section's storage-compute integrated environment and should not be applied directly to every deployment mode."
+- id: q4
+  objective: "Connect to Doris and execute SQL to create tables, insert data, and aggregate by group."
+  prompt: "Each row in orders_sample represents one order. How should you query order counts and amounts by date with a consistent sort order?"
+  options:
+  - id: a
+    text: "A. Group by order_id, calculate COUNT(*) and SUM(order_amount), then sort by date"
+  - id: b
+    text: "B. Group by order_date, calculate COUNT(*) and SUM(order_amount), then sort by date"
+  - id: c
+    text: "C. Sort directly by order_date and output each order ID and amount row by row"
+  - id: d
+    text: "D. Group by order_date, calculate COUNT(*) and AVG(order_amount), then sort by date"
+  answer: b
+  explanation: "A: Grouping by order ID retains order-level granularity rather than producing daily summaries. B: Correct. GROUP BY sets date-level granularity, COUNT and SUM calculate the metrics, and ORDER BY ensures display order; the count relies on one row per order. C: ORDER BY only sorts; it does not combine orders from the same day into one row. D: AVG gives the average order amount and cannot replace the daily total."
+- id: q5
+  objective: "Validate data using details, row counts, and amounts, and distinguish pre-tax order amounts from payments received."
+  prompt: "A store exports 20 sample orders with a pre-tax total of 8600 yuan. The exported fields contain no payment information. Which conclusion is supported by the data?"
+  options:
+  - id: a
+    text: "A. All orders at this store that day total 8600 yuan"
+  - id: b
+    text: "B. All 20 orders are unpaid, and payments received total zero"
+  - id: c
+    text: "C. This sample's pre-tax order amount is 8600 yuan"
+  - id: d
+    text: "D. Every amount in this sample is correct because the total is 8600 yuan"
+  answer: c
+  explanation: "A: The sample does not represent all transactions for the entire day. B: The absence of payment fields does not imply nonpayment. C: Correct. The conclusion is limited to the sample and its pre-tax order amount. D: Matching totals can still hide offsetting errors in individual records."

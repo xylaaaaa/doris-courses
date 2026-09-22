@@ -1,0 +1,73 @@
+title: "Module 2: Observe Storage and Write Batches"
+description: "Five single-choice questions; no database connection required. View explanations after submitting."
+questions:
+- id: q1
+  objective: "Trace a query to explain FE planning and BE execution responsibilities."
+  prompt: "An order-analysis SQL statement enters Doris from a client. Which path is correct?"
+  options:
+  - id: a
+    text: "A. Client submits SQL → BE generates a distributed plan → FE summarizes scan results"
+  - id: b
+    text: "B. Client generates a distributed plan → FE forwards it → BE executes fragments"
+  - id: c
+    text: "C. Client submits SQL → FE plans → Wait for Compaction → BE executes"
+  - id: d
+    text: "D. Client submits SQL → FE plans and distributes → BE executes → Results are coordinated and returned"
+  answer: d
+  explanation: "A: Planning is FE's responsibility; BE does not centrally generate the distributed plan. B: The client does not need to generate Doris's distributed plan. C: Compaction reorganizes storage in the background; it is not a mandatory step before each query. D: Correct. FE handles planning and coordination, while BE performs the scans and computation in the plan."
+- id: q2
+  objective: "Explain the hierarchy of Table, Partition, Tablet, Rowset, and Segment."
+  prompt: "The table in this course has only a base index, two partitions, and four buckets per partition. Excluding replicas, how should you understand its storage hierarchy?"
+  options:
+  - id: a
+    text: "A. Four Tablets in total, shared by both partitions; Tablets contain Rowsets"
+  - id: b
+    text: "B. Eight Tablets in total; Tablets contain Rowsets, and Rowsets contain Segments"
+  - id: c
+    text: "C. Two Tablets in total; each Tablet's four buckets represent four replicas"
+  - id: d
+    text: "D. Eight Tablets in total; each Tablet always has exactly one Rowset and one Segment"
+  answer: b
+  explanation: "A: Each partition has its own buckets; buckets in different partitions cannot be counted as shared. B: Correct. With only a base index and excluding replicas, the Tablet count is 2×4. C: Buckets describe shards, while replicas describe copies of the same shard; these are different concepts. D: Rowset and Segment counts change with writes and compaction; they do not have a fixed one-to-one relationship."
+- id: q3
+  objective: "Explain the relationship between write batches, data visibility, and background Compaction."
+  prompt: "If Compaction has not finished after a write, does that necessarily mean the new data cannot be queried?"
+  options:
+  - id: a
+    text: "A. It cannot be queried; new data must be merged into old files first"
+  - id: b
+    text: "B. It can be queried; an HTTP 200 response to a load request means the data is visible to queries"
+  - id: c
+    text: "C. It can be queried; visibility depends on transaction publication and interface semantics, not on waiting for Compaction"
+  - id: d
+    text: "D. It can be queried; once BE generates a Segment file, the transaction is visible"
+  answer: c
+  explanation: "A: Queries can read multiple published Rowsets without waiting for background compaction. B: HTTP success only describes the request-level outcome; load status and publication results still need checking. C: Correct. Data visibility and physical compaction are different processes. D: File generation does not mean transaction publication is complete; file existence alone cannot establish visibility."
+- id: q4
+  objective: "Keep table structure and data constant while comparing batch and row-by-row writes."
+  prompt: "A team compares writes in batches of 100 rows and 10000 rows. Both runs produce identical results, but the second run also increases the bucket count. How should the results be interpreted?"
+  options:
+  - id: a
+    text: "A. First fix the bucket count, data, and write mode, then repeat the comparison of the two batch sizes"
+  - id: b
+    text: "B. Matching results mean all observed timing differences come from batch size"
+  - id: c
+    text: "C. Using the shortest time from each run eliminates the effect of changing the bucket count"
+  - id: d
+    text: "D. Keep the different bucket counts and compare only the final Rowset counts"
+  answer: a
+  explanation: "A: Correct. Changing multiple variables at once prevents attribution; control conditions before comparing. B: Correct data is a prerequisite but does not rule out the bucket count's effect. C: Choosing the shortest time cannot fix the experimental design. D: Bucket count changes data distribution, and Rowset count alone cannot explain the effect of batching."
+- id: q5
+  objective: "Distinguish what query plans, storage metadata, and runtime evidence can each tell you."
+  prompt: "How should EXPLAIN, Tablet metadata, and Query Profile be combined?"
+  options:
+  - id: a
+    text: "A. Use EXPLAIN's estimated scan scope to calculate actual disk reads directly"
+  - id: b
+    text: "B. Replace Rowset and Segment details and runtime metrics with one VersionCount sample"
+  - id: c
+    text: "C. Predict peak production throughput from one Profile's elapsed time on a ten-row sample"
+  - id: d
+    text: "D. Use EXPLAIN for the plan, metadata for the sampled state, and Profile for actual execution work"
+  answer: d
+  explanation: "A: A plan is not an execution result; caching and execution behavior affect actual reads. B: Version count is just one observation and cannot replace all physical-file and execution evidence. C: Ten rows and a single query do not provide the data scale or concurrency of a production workload. D: Correct. The three types of evidence complement one another; background compaction, caching, and the runtime environment must also be considered when sampling."

@@ -1,0 +1,73 @@
+title: 'Module 7: Resolve Out-of-Order Events, Preserve History, and Replay Recoverably'
+description: Five single-choice questions; no database connection required. View explanations after submitting.
+questions:
+- id: q1
+  objective: Distinguish the keys and purposes of current order state, event history, and raw deliveries.
+  prompt: Why are three granularities needed—current state, event history, and delivery records?
+  options:
+  - id: a
+    text: A. The current table records the latest state, so it can replace all event history and redelivery records
+  - id: b
+    text: B. Overwrite current state, history, and deliveries by order_id to reduce duplicates
+  - id: c
+    text: C. Generate a new event_id for every redelivery so history counts every delivery
+  - id: d
+    text: D. The current table answers what is true now, event history answers what happened, and delivery records answer how many attempts were made
+  answer: d
+  explanation: "A: The latest state overwrites old values, so it cannot reconstruct all events and attempts. B: An order has multiple events and deliveries; overwriting them all loses facts at each level. C: A duplicate delivery is not a new business event; a new event_id breaks event deduplication. Delivery counts belong in the delivery layer. D: Correct. This course uses order_id, event_id, and attempt_id with delivery_id to represent these granularities."
+- id: q2
+  objective: Use business versions to explain the handling of duplicate and out-of-order events.
+  prompt: Full-state events for order 701 arrive in this order—version 8 delivered, version 6 paid, version 7 shipped, then a redelivery of the same version 7 event. How should the current table and event history change?
+  options:
+  - id: a
+    text: A. The current state ends as shipped, and history appends a record for every delivery
+  - id: b
+    text: B. The current state remains delivered, and history keeps only the version 8 event
+  - id: c
+    text: C. The current state remains delivered, and history keeps three events by stable event ID
+  - id: d
+    text: D. Use the sequence of four arrivals as version numbers and take the state with the highest arrival number
+  answer: c
+  explanation: "A: Arrival order cannot replace business versions, and redelivery is not a new business event. B: Late events still have historical value. C: Correct. Full states are resolved by business version, history is deduplicated by stable event ID, and deliveries can be recorded separately. D: A local arrival sequence still allows a late old state to overwrite a newer one."
+- id: q3
+  objective: Distinguish partial column updates from full-row writes that omit fields.
+  prompt: When updating only the status and version of orders_partial_update, what is the correct check?
+  options:
+  - id: a
+    text: A. Enable partial updates, use an increasing version, verify that the omitted amount and region stay unchanged, and restore the setting afterward
+  - id: b
+    text: B. Use a normal full-row write while omitting other fields, assuming omission automatically preserves old values
+  - id: c
+    text: C. Enable partial updates and check only the status; treat omitted fields reverting to defaults as success
+  - id: d
+    text: D. Enable partial updates and use a lower version, assuming the setting bypasses Sequence resolution
+  answer: a
+  explanation: "A: Correct. Check the status and preserved fields in the independent lab table; the amount should remain 100.00 and the region EAST, and restore session settings. B: A full-row write that omits fields is not a partial update; it may trigger defaults or other full-row write behavior. C: Preserving omitted fields is one purpose of partial updates, so checking only modified columns is insufficient. D: Partial updates do not disable version resolution; a lower business version should not overwrite a higher one."
+- id: q4
+  objective: Distinguish soft deletion, SQL deletion, and physical file reclamation.
+  prompt: How should soft deletion, SQL DELETE, and refunds be understood?
+  options:
+  - id: a
+    text: A. After setting is_deleted, an ordinary SELECT automatically hides the order
+  - id: b
+    text: B. Soft deletion requires query filtering, SQL DELETE changes row visibility, and refund facts should still be retained
+  - id: c
+    text: C. If a row cannot be queried after SQL DELETE, its physical files have been reclaimed immediately
+  - id: d
+    text: D. After a successful refund, delete the order and payment records; keeping only the net amount is sufficient for reconciliation
+  answer: b
+  explanation: "A: is_deleted is a business field in this course; queries need an explicit filter or a view that encapsulates it. B: Correct. These concern a business marker, logical visibility, and business financial facts, respectively. C: Query invisibility does not mean disk space is released immediately; physical reclamation is a separate process. D: Deleting facts loses the links among orders, payments, and refunds; a net amount cannot replace traceable reconciliation records."
+- id: q5
+  objective: Verify recovery through repeated replay, row-by-row comparison, and independent business transaction records.
+  prompt: Processing stops after history is written but before current state is written. What should be checked after recovery?
+  options:
+  - id: a
+    text: A. Repeat the unfinished workflow, compare current state and history field by field, and reconcile with independent transaction records; this lab expects 11 current orders, 18 history records, and 19 deliveries
+  - id: b
+    text: B. If event_id already exists in history, skip subsequent current-state and business transaction steps
+  - id: c
+    text: C. If the delivery count has not increased after recovery, conclude that all business data has been correctly restored
+  - id: d
+    text: D. If event history was written successfully, conclude that the current table and independent business transaction records were also committed atomically
+  answer: a
+  explanation: "A: Correct. Repeated replay should keep business results idempotent and verify them against independent item, payment, refund, and shipment records; these counts apply only to this lab's fixed replay workflow. B: An interruption may occur after the history write, so skipping can leave current-state or transaction processing unfinished. C: Delivery counts describe attempts and cannot prove business tables are correct; retries in this course also retain additional attempt records. D: The three tables are written in separate steps. After one succeeds, check the others to ensure the entire workflow has completed."

@@ -1,0 +1,214 @@
+{
+  "version": "wwi-v1-core-20260918",
+  "provenance": {
+    "source": "Microsoft Wide World Importers v1.0",
+    "source_kind": "synthetic_official_sample",
+    "license": "MIT",
+    "selection": "OrderID IN (1,2,3,4,5,80,81,82,83,84); referenced dimensions plus IDs 1..11 for course simulation",
+    "transforms": "order_amount = SUM(OrderLines.Quantity * UnitPrice), excludes tax; no payment or status inferred"
+  },
+  "backup_sha256": "e842bad6ce02f74f166947e559dab1b476edd7eaae3da2ab9e3f522f1dd87124",
+  "tables": {
+    "orders": {
+      "source": "Sales.Orders",
+      "columns": [
+        "OrderID",
+        "CustomerID",
+        "SalespersonPersonID",
+        "BackorderOrderID",
+        "OrderDate",
+        "ExpectedDeliveryDate",
+        "CustomerPurchaseOrderNumber",
+        "IsUndersupplyBackordered",
+        "PickingCompletedWhen",
+        "LastEditedWhen"
+      ],
+      "primary": "OrderID",
+      "select": "SELECT [OrderID] AS [OrderID],[CustomerID] AS [CustomerID],[SalespersonPersonID] AS [SalespersonPersonID],[BackorderOrderID] AS [BackorderOrderID],[OrderDate] AS [OrderDate],[ExpectedDeliveryDate] AS [ExpectedDeliveryDate],[CustomerPurchaseOrderNumber] AS [CustomerPurchaseOrderNumber],[IsUndersupplyBackordered] AS [IsUndersupplyBackordered],CAST(LEFT(CONVERT(varchar(27),[PickingCompletedWhen],126),26) AS datetime2(6)) AS [PickingCompletedWhen],CAST(LEFT(CONVERT(varchar(27),[LastEditedWhen],126),26) AS datetime2(6)) AS [LastEditedWhen] FROM Sales.Orders ORDER BY [OrderID]",
+      "ddl": "CREATE TABLE `orders` (`OrderID` BIGINT NOT NULL,`CustomerID` BIGINT NOT NULL,`SalespersonPersonID` BIGINT NOT NULL,`BackorderOrderID` BIGINT NULL,`OrderDate` DATE NOT NULL,`ExpectedDeliveryDate` DATE NOT NULL,`CustomerPurchaseOrderNumber` STRING NULL,`IsUndersupplyBackordered` BOOLEAN NOT NULL,`PickingCompletedWhen` DATETIME(6) NULL,`LastEditedWhen` DATETIME(6) NOT NULL) DUPLICATE KEY(`OrderID`) DISTRIBUTED BY HASH(`OrderID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 73595,
+      "bytes": 1124459,
+      "sha256": "8ee68a25de4c8dfa9fd0c3d5c466ad9d47d57b589162c2d1f82f45b344cfdbd3"
+    },
+    "order_lines": {
+      "source": "Sales.OrderLines",
+      "columns": [
+        "OrderLineID",
+        "OrderID",
+        "StockItemID",
+        "Description",
+        "Quantity",
+        "UnitPrice",
+        "TaxRate",
+        "PickedQuantity",
+        "PickingCompletedWhen",
+        "LastEditedWhen"
+      ],
+      "primary": "OrderLineID",
+      "select": "SELECT [OrderLineID] AS [OrderLineID],[OrderID] AS [OrderID],[StockItemID] AS [StockItemID],[Description] AS [Description],[Quantity] AS [Quantity],[UnitPrice] AS [UnitPrice],[TaxRate] AS [TaxRate],[PickedQuantity] AS [PickedQuantity],CAST(LEFT(CONVERT(varchar(27),[PickingCompletedWhen],126),26) AS datetime2(6)) AS [PickingCompletedWhen],CAST(LEFT(CONVERT(varchar(27),[LastEditedWhen],126),26) AS datetime2(6)) AS [LastEditedWhen] FROM Sales.OrderLines ORDER BY [OrderLineID]",
+      "ddl": "CREATE TABLE `order_lines` (`OrderLineID` BIGINT NOT NULL,`OrderID` BIGINT NOT NULL,`StockItemID` BIGINT NOT NULL,`Description` STRING NOT NULL,`Quantity` BIGINT NOT NULL,`UnitPrice` DECIMAL(18,2) NULL,`TaxRate` DECIMAL(18,3) NOT NULL,`PickedQuantity` BIGINT NOT NULL,`PickingCompletedWhen` DATETIME(6) NULL,`LastEditedWhen` DATETIME(6) NOT NULL) DUPLICATE KEY(`OrderLineID`) DISTRIBUTED BY HASH(`OrderLineID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 231412,
+      "bytes": 3225534,
+      "sha256": "a0312d669af050050fd35240757d9b228d852dd33a91aac7bd44412e23f8968f"
+    },
+    "customers": {
+      "source": "Sales.Customers",
+      "columns": [
+        "CustomerID",
+        "CustomerName",
+        "BillToCustomerID",
+        "CustomerCategoryID",
+        "BuyingGroupID",
+        "DeliveryMethodID",
+        "DeliveryCityID",
+        "CreditLimit",
+        "AccountOpenedDate",
+        "StandardDiscountPercentage",
+        "IsOnCreditHold",
+        "PaymentDays"
+      ],
+      "primary": "CustomerID",
+      "select": "SELECT [CustomerID] AS [CustomerID],[CustomerName] AS [CustomerName],[BillToCustomerID] AS [BillToCustomerID],[CustomerCategoryID] AS [CustomerCategoryID],[BuyingGroupID] AS [BuyingGroupID],[DeliveryMethodID] AS [DeliveryMethodID],[DeliveryCityID] AS [DeliveryCityID],[CreditLimit] AS [CreditLimit],[AccountOpenedDate] AS [AccountOpenedDate],[StandardDiscountPercentage] AS [StandardDiscountPercentage],[IsOnCreditHold] AS [IsOnCreditHold],[PaymentDays] AS [PaymentDays] FROM Sales.Customers ORDER BY [CustomerID]",
+      "ddl": "CREATE TABLE `customers` (`CustomerID` BIGINT NOT NULL,`CustomerName` STRING NOT NULL,`BillToCustomerID` BIGINT NOT NULL,`CustomerCategoryID` BIGINT NOT NULL,`BuyingGroupID` BIGINT NULL,`DeliveryMethodID` BIGINT NOT NULL,`DeliveryCityID` BIGINT NOT NULL,`CreditLimit` DECIMAL(18,2) NULL,`AccountOpenedDate` DATE NOT NULL,`StandardDiscountPercentage` DECIMAL(18,3) NOT NULL,`IsOnCreditHold` BOOLEAN NOT NULL,`PaymentDays` BIGINT NOT NULL) DUPLICATE KEY(`CustomerID`) DISTRIBUTED BY HASH(`CustomerID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 663,
+      "bytes": 23870,
+      "sha256": "3940d08c2ae56b9dd5dae822237189cb75919180e654317c404ab86c13f35129"
+    },
+    "products": {
+      "source": "Warehouse.StockItems",
+      "columns": [
+        "StockItemID",
+        "StockItemName",
+        "SupplierID",
+        "ColorID",
+        "Brand",
+        "Size",
+        "LeadTimeDays",
+        "QuantityPerOuter",
+        "IsChillerStock",
+        "TaxRate",
+        "UnitPrice",
+        "RecommendedRetailPrice",
+        "TypicalWeightPerUnit"
+      ],
+      "primary": "StockItemID",
+      "select": "SELECT [StockItemID] AS [StockItemID],[StockItemName] AS [StockItemName],[SupplierID] AS [SupplierID],[ColorID] AS [ColorID],[Brand] AS [Brand],[Size] AS [Size],[LeadTimeDays] AS [LeadTimeDays],[QuantityPerOuter] AS [QuantityPerOuter],[IsChillerStock] AS [IsChillerStock],[TaxRate] AS [TaxRate],[UnitPrice] AS [UnitPrice],[RecommendedRetailPrice] AS [RecommendedRetailPrice],[TypicalWeightPerUnit] AS [TypicalWeightPerUnit] FROM Warehouse.StockItems ORDER BY [StockItemID]",
+      "ddl": "CREATE TABLE `products` (`StockItemID` BIGINT NOT NULL,`StockItemName` STRING NOT NULL,`SupplierID` BIGINT NOT NULL,`ColorID` BIGINT NULL,`Brand` STRING NULL,`Size` STRING NULL,`LeadTimeDays` BIGINT NOT NULL,`QuantityPerOuter` BIGINT NOT NULL,`IsChillerStock` BOOLEAN NOT NULL,`TaxRate` DECIMAL(18,3) NOT NULL,`UnitPrice` DECIMAL(18,2) NOT NULL,`RecommendedRetailPrice` DECIMAL(18,2) NULL,`TypicalWeightPerUnit` DECIMAL(18,3) NOT NULL) DUPLICATE KEY(`StockItemID`) DISTRIBUTED BY HASH(`StockItemID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 227,
+      "bytes": 10500,
+      "sha256": "fa2bf8209dad95225803c8c2d3590a4f538ffda1da5e2f57eceae9b8f9df5fad"
+    },
+    "invoices": {
+      "source": "Sales.Invoices",
+      "columns": [
+        "InvoiceID",
+        "CustomerID",
+        "BillToCustomerID",
+        "OrderID",
+        "DeliveryMethodID",
+        "InvoiceDate",
+        "IsCreditNote",
+        "CreditNoteReason",
+        "TotalDryItems",
+        "TotalChillerItems",
+        "DeliveryRun",
+        "RunPosition",
+        "ReturnedDeliveryData",
+        "ConfirmedDeliveryTime",
+        "ConfirmedReceivedBy",
+        "LastEditedWhen"
+      ],
+      "primary": "InvoiceID",
+      "select": "SELECT [InvoiceID] AS [InvoiceID],[CustomerID] AS [CustomerID],[BillToCustomerID] AS [BillToCustomerID],[OrderID] AS [OrderID],[DeliveryMethodID] AS [DeliveryMethodID],[InvoiceDate] AS [InvoiceDate],[IsCreditNote] AS [IsCreditNote],[CreditNoteReason] AS [CreditNoteReason],[TotalDryItems] AS [TotalDryItems],[TotalChillerItems] AS [TotalChillerItems],[DeliveryRun] AS [DeliveryRun],[RunPosition] AS [RunPosition],[ReturnedDeliveryData] AS [ReturnedDeliveryData],CAST(LEFT(CONVERT(varchar(27),[ConfirmedDeliveryTime],126),26) AS datetime2(6)) AS [ConfirmedDeliveryTime],[ConfirmedReceivedBy] AS [ConfirmedReceivedBy],CAST(LEFT(CONVERT(varchar(27),[LastEditedWhen],126),26) AS datetime2(6)) AS [LastEditedWhen] FROM Sales.Invoices ORDER BY [InvoiceID]",
+      "ddl": "CREATE TABLE `invoices` (`InvoiceID` BIGINT NOT NULL,`CustomerID` BIGINT NOT NULL,`BillToCustomerID` BIGINT NOT NULL,`OrderID` BIGINT NULL,`DeliveryMethodID` BIGINT NOT NULL,`InvoiceDate` DATE NOT NULL,`IsCreditNote` BOOLEAN NOT NULL,`CreditNoteReason` STRING NULL,`TotalDryItems` BIGINT NOT NULL,`TotalChillerItems` BIGINT NOT NULL,`DeliveryRun` STRING NULL,`RunPosition` STRING NULL,`ReturnedDeliveryData` STRING NULL,`ConfirmedDeliveryTime` DATETIME(6) NULL,`ConfirmedReceivedBy` STRING NULL,`LastEditedWhen` DATETIME(6) NOT NULL) DUPLICATE KEY(`InvoiceID`) DISTRIBUTED BY HASH(`InvoiceID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 70510,
+      "bytes": 6354748,
+      "sha256": "4ac6a3b1a20e4caca8ec3a857c8c5fd09aa107638fce62d7dc5edcf7e143c807"
+    },
+    "invoice_lines": {
+      "source": "Sales.InvoiceLines",
+      "columns": [
+        "InvoiceLineID",
+        "InvoiceID",
+        "StockItemID",
+        "Description",
+        "Quantity",
+        "UnitPrice",
+        "TaxRate",
+        "TaxAmount",
+        "LineProfit",
+        "ExtendedPrice",
+        "LastEditedWhen"
+      ],
+      "primary": "InvoiceLineID",
+      "select": "SELECT [InvoiceLineID] AS [InvoiceLineID],[InvoiceID] AS [InvoiceID],[StockItemID] AS [StockItemID],[Description] AS [Description],[Quantity] AS [Quantity],[UnitPrice] AS [UnitPrice],[TaxRate] AS [TaxRate],[TaxAmount] AS [TaxAmount],[LineProfit] AS [LineProfit],[ExtendedPrice] AS [ExtendedPrice],CAST(LEFT(CONVERT(varchar(27),[LastEditedWhen],126),26) AS datetime2(6)) AS [LastEditedWhen] FROM Sales.InvoiceLines ORDER BY [InvoiceLineID]",
+      "ddl": "CREATE TABLE `invoice_lines` (`InvoiceLineID` BIGINT NOT NULL,`InvoiceID` BIGINT NOT NULL,`StockItemID` BIGINT NOT NULL,`Description` STRING NOT NULL,`Quantity` BIGINT NOT NULL,`UnitPrice` DECIMAL(18,2) NULL,`TaxRate` DECIMAL(18,3) NOT NULL,`TaxAmount` DECIMAL(18,2) NOT NULL,`LineProfit` DECIMAL(18,2) NOT NULL,`ExtendedPrice` DECIMAL(18,2) NOT NULL,`LastEditedWhen` DATETIME(6) NOT NULL) DUPLICATE KEY(`InvoiceLineID`) DISTRIBUTED BY HASH(`InvoiceLineID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 228265,
+      "bytes": 3809541,
+      "sha256": "1e5510d3d24e7cc0d25484d39e23facfa306fd03b144af064edeeb110bef8c57"
+    },
+    "customer_transactions": {
+      "source": "Sales.CustomerTransactions",
+      "columns": [
+        "CustomerTransactionID",
+        "CustomerID",
+        "TransactionTypeID",
+        "InvoiceID",
+        "PaymentMethodID",
+        "TransactionDate",
+        "AmountExcludingTax",
+        "TaxAmount",
+        "TransactionAmount",
+        "OutstandingBalance",
+        "FinalizationDate",
+        "IsFinalized",
+        "LastEditedWhen"
+      ],
+      "primary": "CustomerTransactionID",
+      "select": "SELECT [CustomerTransactionID] AS [CustomerTransactionID],[CustomerID] AS [CustomerID],[TransactionTypeID] AS [TransactionTypeID],[InvoiceID] AS [InvoiceID],[PaymentMethodID] AS [PaymentMethodID],[TransactionDate] AS [TransactionDate],[AmountExcludingTax] AS [AmountExcludingTax],[TaxAmount] AS [TaxAmount],[TransactionAmount] AS [TransactionAmount],[OutstandingBalance] AS [OutstandingBalance],[FinalizationDate] AS [FinalizationDate],[IsFinalized] AS [IsFinalized],CAST(LEFT(CONVERT(varchar(27),[LastEditedWhen],126),26) AS datetime2(6)) AS [LastEditedWhen] FROM Sales.CustomerTransactions ORDER BY [CustomerTransactionID]",
+      "ddl": "CREATE TABLE `customer_transactions` (`CustomerTransactionID` BIGINT NOT NULL,`CustomerID` BIGINT NOT NULL,`TransactionTypeID` BIGINT NOT NULL,`InvoiceID` BIGINT NULL,`PaymentMethodID` BIGINT NULL,`TransactionDate` DATE NOT NULL,`AmountExcludingTax` DECIMAL(18,2) NOT NULL,`TaxAmount` DECIMAL(18,2) NOT NULL,`TransactionAmount` DECIMAL(18,2) NOT NULL,`OutstandingBalance` DECIMAL(18,2) NOT NULL,`FinalizationDate` DATE NULL,`IsFinalized` BOOLEAN NULL,`LastEditedWhen` DATETIME(6) NOT NULL) DUPLICATE KEY(`CustomerTransactionID`) DISTRIBUTED BY HASH(`CustomerTransactionID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 97147,
+      "bytes": 2386786,
+      "sha256": "e851dad204df375c1c0df9ac9499e895c7c337e4143a1e6a4868a7e5d44a1a76"
+    },
+    "payment_methods": {
+      "source": "Application.PaymentMethods",
+      "columns": [
+        "PaymentMethodID",
+        "PaymentMethodName"
+      ],
+      "primary": "PaymentMethodID",
+      "select": "SELECT [PaymentMethodID] AS [PaymentMethodID],[PaymentMethodName] AS [PaymentMethodName] FROM Application.PaymentMethods ORDER BY [PaymentMethodID]",
+      "ddl": "CREATE TABLE `payment_methods` (`PaymentMethodID` BIGINT NOT NULL,`PaymentMethodName` STRING NOT NULL) DUPLICATE KEY(`PaymentMethodID`) DISTRIBUTED BY HASH(`PaymentMethodID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 4,
+      "bytes": 828,
+      "sha256": "9dab55158e58c6cbab9cf7308a7297902de3a0e6429ae00999e2a945c16fa7d3"
+    },
+    "transaction_types": {
+      "source": "Application.TransactionTypes",
+      "columns": [
+        "TransactionTypeID",
+        "TransactionTypeName"
+      ],
+      "primary": "TransactionTypeID",
+      "select": "SELECT [TransactionTypeID] AS [TransactionTypeID],[TransactionTypeName] AS [TransactionTypeName] FROM Application.TransactionTypes ORDER BY [TransactionTypeID]",
+      "ddl": "CREATE TABLE `transaction_types` (`TransactionTypeID` BIGINT NOT NULL,`TransactionTypeName` STRING NOT NULL) DUPLICATE KEY(`TransactionTypeID`) DISTRIBUTED BY HASH(`TransactionTypeID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 13,
+      "bytes": 1084,
+      "sha256": "c842f11e1da4445827ea22eb8343170b398a9ddc874700fb72df8f4c9b3a8662"
+    },
+    "delivery_methods": {
+      "source": "Application.DeliveryMethods",
+      "columns": [
+        "DeliveryMethodID",
+        "DeliveryMethodName"
+      ],
+      "primary": "DeliveryMethodID",
+      "select": "SELECT [DeliveryMethodID] AS [DeliveryMethodID],[DeliveryMethodName] AS [DeliveryMethodName] FROM Application.DeliveryMethods ORDER BY [DeliveryMethodID]",
+      "ddl": "CREATE TABLE `delivery_methods` (`DeliveryMethodID` BIGINT NOT NULL,`DeliveryMethodName` STRING NOT NULL) DUPLICATE KEY(`DeliveryMethodID`) DISTRIBUTED BY HASH(`DeliveryMethodID`) BUCKETS 2 PROPERTIES ('replication_num'='1')",
+      "rows": 10,
+      "bytes": 1028,
+      "sha256": "904e56c341e12511a3151b2511a0547b1f08d02eed2c10dd3c4227bc76b636b2"
+    }
+  }
+}

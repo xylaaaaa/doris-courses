@@ -1,0 +1,79 @@
+title: 'Module 8: Views and materialized views'
+description: Five single-choice questions; no database connection required.
+questions:
+- id: q1
+  objective: distinguish a logical view from stored materialized results
+  prompt: Which statement best distinguishes a view from a materialized view?
+  options:
+  - id: a
+    text: A. Both always store a second copy of every source row
+  - id: b
+    text: B. A view stores a definition; a materialized view maintains query results
+  - id: c
+    text: C. A materialized view is only a renamed table
+  - id: d
+    text: D. A view can never contain a JOIN
+  answer: b
+  explanation: A view stores the query definition; a materialized view also maintains
+    stored results that can serve repeated work.
+- id: q2
+  objective: choose a refresh policy from freshness and cost requirements
+  prompt: A dashboard accepts five-minute-old data to reduce refresh cost. Which design
+    is appropriate?
+  options:
+  - id: a
+    text: A. Refresh on every query regardless of cost
+  - id: b
+    text: B. Disable all refreshes and claim real-time data
+  - id: c
+    text: C. Use an explicit scheduled or manual refresh policy
+  - id: d
+    text: D. Replace the view with a client-side CSV
+  answer: c
+  explanation: A scheduled or manual refresh policy can trade freshness for predictable
+    work; the choice must be explicit.
+- id: q3
+  objective: verify a materialized view with metadata and result checks
+  prompt: What should be checked after creating a materialized view?
+  options:
+  - id: a
+    text: A. Refresh state, row values, and aggregate totals
+  - id: b
+    text: B. Only the CREATE statement text
+  - id: c
+    text: C. Only the client response time
+  - id: d
+    text: D. Only whether the object name exists
+  answer: a
+  explanation: Check metadata and compare the materialized result with the canonical
+    query result.
+- id: q4
+  objective: use EXPLAIN as evidence for query rewrite rather than assuming a hit
+  prompt: What is the correct evidence that a query used a materialized view?
+  options:
+  - id: a
+    text: A. The query returned at least one row
+  - id: b
+    text: B. The source table still exists
+  - id: c
+    text: C. The view has a descriptive name
+  - id: d
+    text: D. The plan shows the materialized view or its scan and results match
+  answer: d
+  explanation: EXPLAIN plan evidence, together with a result comparison, is stronger
+    than assuming an object name implies a rewrite.
+- id: q5
+  objective: keep a published view contract stable while changing its implementation
+  prompt: Why publish a view as the service contract?
+  options:
+  - id: a
+    text: A. It forces every consumer to know physical tablets
+  - id: b
+    text: B. It separates consumer contract from implementation details
+  - id: c
+    text: C. It prevents all schema evolution
+  - id: d
+    text: D. It guarantees every query is rewritten
+  answer: b
+  explanation: Consumers depend on stable columns and semantics while maintainers
+    can change the underlying implementation.

@@ -1,0 +1,70 @@
+name: doris-warehousing-streaming
+
+x-flink: &flink
+  image: doris-course-flink:1.20.1-cdc3.4.0-doris25.0.0
+  build: .
+  profiles: [cdc]
+  environment:
+    FLINK_PROPERTIES: |
+      jobmanager.rpc.address: jobmanager
+      taskmanager.numberOfTaskSlots: 2
+      parallelism.default: 1
+      execution.checkpointing.interval: 5s
+      state.checkpoints.dir: file:///opt/flink/state/checkpoints
+      state.savepoints.dir: file:///opt/flink/state/savepoints
+      rest.bind-address: 0.0.0.0
+  volumes:
+    - flink-state:/opt/flink/state
+  networks: [default, doris]
+
+services:
+  kafka:
+    image: apache/kafka:3.9.0
+    profiles: [kafka]
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://course-stream-kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      doris:
+        aliases: [course-stream-kafka]
+  mysql:
+    image: mysql:8.0.33
+    profiles: [cdc]
+    command: ["--default-time-zone=+08:00", --server-id=51001, --log-bin=mysql-bin, --binlog-format=ROW, --binlog-row-image=FULL, --binlog-expire-logs-seconds=604800]
+    environment:
+      MYSQL_ROOT_PASSWORD: course_stream_local_only
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/01-course.sql:ro
+    networks: [default]
+  jobmanager:
+    <<: *flink
+    command: jobmanager
+    ports:
+      - "127.0.0.1::8081"
+  taskmanager:
+    <<: *flink
+    command: taskmanager
+    depends_on: [jobmanager]
+
+networks:
+  doris:
+    external: true
+    name: doris-warehousing-course_default
+
+volumes:
+  kafka-data:
+  mysql-data:
+  flink-state:

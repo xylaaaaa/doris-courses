@@ -1,0 +1,76 @@
+title: 'Module 11: BI and AI applications'
+description: Five single-choice questions; no database connection required.
+questions:
+- id: q1
+  objective: design a consumer-facing semantic view with stable names
+  prompt: What is the role of a semantic view for BI?
+  options:
+  - id: a
+    text: A. A stable reviewed contract for dimensions and measures
+  - id: b
+    text: B. A replacement for all source data
+  - id: c
+    text: C. A guarantee of dashboard correctness without tests
+  - id: d
+    text: D. A physical replica of every consumer
+  answer: a
+  explanation: It provides reviewed names and meanings so dashboards do not repeat
+    business logic independently.
+- id: q2
+  objective: distinguish dashboard dimensions from metric measures
+  prompt: Which is a measure in a daily order dashboard?
+  options:
+  - id: a
+    text: A. order_date
+  - id: b
+    text: B. region label
+  - id: c
+    text: C. gross_amount
+  - id: d
+    text: D. dashboard title
+  answer: c
+  explanation: Order count and gross amount are measures; date is a dimension.
+- id: q3
+  objective: prepare a feature projection without claiming model quality
+  prompt: What does a feature projection provide?
+  options:
+  - id: a
+    text: A. A guaranteed prediction
+  - id: b
+    text: B. Reviewed input columns for a downstream model or service
+  - id: c
+    text: C. Automatic access to private data
+  - id: d
+    text: D. A replacement for monitoring
+  answer: b
+  explanation: It prepares typed, named inputs; it does not prove a downstream model
+    is accurate.
+- id: q4
+  objective: validate nulls, freshness, and row counts before serving consumers
+  prompt: Which checks belong before publishing a consumer view?
+  options:
+  - id: a
+    text: A. Only chart colors
+  - id: b
+    text: B. Only SQL text length
+  - id: c
+    text: C. Only model framework version
+  - id: d
+    text: D. Nulls, freshness/date coverage, row counts, and totals
+  answer: d
+  explanation: Check nulls, date coverage, row counts, and metric totals before publishing.
+- id: q5
+  objective: document the boundary between Doris SQL and downstream BI or AI tools
+  prompt: What should be documented at the integration boundary?
+  options:
+  - id: a
+    text: A. Data contract, freshness, access, and downstream responsibilities
+  - id: b
+    text: B. Only the JDBC driver name
+  - id: c
+    text: C. Only the visualization theme
+  - id: d
+    text: D. That downstream accuracy is automatic
+  answer: a
+  explanation: Document what Doris guarantees and what the BI or AI consumer must
+    handle.

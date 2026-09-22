@@ -1,0 +1,75 @@
+title: 'Module 13: Storage and lifecycle management'
+description: Five single-choice questions; no database connection required.
+questions:
+- id: q1
+  objective: choose a partition boundary from data retention semantics
+  prompt: What should determine a partition boundary?
+  options:
+  - id: a
+    text: A. A random bucket count
+  - id: b
+    text: B. Retention and query time semantics
+  - id: c
+    text: C. A dashboard color
+  - id: d
+    text: D. The number of SQL clients
+  answer: b
+  explanation: Retention and query time semantics should determine the boundary.
+- id: q2
+  objective: inspect partitions, buckets, tablets, and replica metadata
+  prompt: Which commands provide layout evidence?
+  options:
+  - id: a
+    text: A. SHOW PARTITIONS, SHOW TABLETS, and SHOW CREATE TABLE
+  - id: b
+    text: B. SELECT COUNT(*) only
+  - id: c
+    text: C. A client-side timer only
+  - id: d
+    text: D. DROP TABLE
+  answer: a
+  explanation: SHOW PARTITIONS, SHOW TABLETS, and SHOW CREATE TABLE provide complementary
+    evidence.
+- id: q3
+  objective: apply a partition-level retention operation without truncating the table
+  prompt: Why prefer partition-level retention for time-partitioned data?
+  options:
+  - id: a
+    text: A. It always changes every partition
+  - id: b
+    text: B. It disables compaction
+  - id: c
+    text: C. It limits the operation to the selected partition
+  - id: d
+    text: D. It removes the need for backups
+  answer: c
+  explanation: It limits the logical operation to the intended retention boundary.
+- id: q4
+  objective: explain the relationship between rowsets, compaction, and physical space
+  prompt: What does compaction do?
+  options:
+  - id: a
+    text: A. It changes business grain automatically
+  - id: b
+    text: B. It grants table privileges
+  - id: c
+    text: C. It guarantees query rewrite
+  - id: d
+    text: D. It reorganizes physical storage after logical changes
+  answer: d
+  explanation: Background compaction reorganizes physical files; logical visibility
+    and physical reclamation are distinct.
+- id: q5
+  objective: write a maintenance runbook with a rollback or recovery check
+  prompt: What belongs in a maintenance runbook?
+  options:
+  - id: a
+    text: A. Scope, prechecks, change, evidence, and recovery path
+  - id: b
+    text: B. Only the ALTER statement
+  - id: c
+    text: C. Only a screenshot
+  - id: d
+    text: D. Only the expected row count
+  answer: a
+  explanation: A runbook names scope, prechecks, change, evidence, and recovery path.

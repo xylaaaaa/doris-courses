@@ -1,0 +1,73 @@
+title: 'Module 6: Preserve Input, Route Rejections, and Automate Validation'
+description: Five single-choice questions; no database connection required. View explanations after submitting.
+questions:
+- id: q1
+  objective: Distinguish field type validation from business quality rules.
+  prompt: Customer ID 999999 can be converted to an integer but is not in the WWI customer table. How should it be handled?
+  options:
+  - id: a
+    text: A. Accept the order directly because the customer ID can be converted to an integer
+  - id: b
+    text: B. Reject it under the customer reference rule and preserve the raw input and reason
+  - id: c
+    text: C. Automatically add customer 999999 to the customer dimension first, then accept the order
+  - id: d
+    text: D. Replace it with an existing customer ID so reference validation passes before loading it into the warehouse
+  answer: b
+  explanation: "A: A valid type only means the value can be represented, not that the customer exists. B: Correct. This input fails the reference check against the independent customer dimension and should be rejected with traceability. C: Creating dimension entries from the input being checked removes the independent basis for reference validation. D: Arbitrarily replacing the customer falsifies order ownership; passing validation does not mean the repair is correct."
+- id: q2
+  objective: Preserve input identifiers and raw fields to trace every rejected record.
+  prompt: How can you explain each rejected record over the long term?
+  options:
+  - id: a
+    text: A. Keep only the load error URL and consult temporary error details when needed
+  - id: b
+    text: B. Count only the total rejections each time and delete the details to save space
+  - id: c
+    text: C. Preserve input_id, raw fields, and rejection reasons so each record can be linked back to the original row
+  - id: d
+    text: D. Keep only cleaned fields and error types, discarding the original values
+  answer: c
+  explanation: "A: Temporary error details help troubleshooting but cannot replace long-term, complete business rejection records. B: A count cannot explain which input was rejected or why. C: Correct. Stable input identifiers and original evidence support tracing, repair, and reprocessing. D: Cleaning changes the original information; keeping only modified values may leave the original failure unexplained."
+- id: q3
+  objective: Use an independent customer dimension and explicit rules to route accepted and rejected data.
+  prompt: You receive 50 order rows. Customer IDs in 2 rows do not exist in the independent customer dimension; all others meet the rules. Customer references must be valid. How should the rows be routed?
+  options:
+  - id: a
+    text: A. Preserve all 50 raw rows, write 48 accepted records, and write 2 rejected records with reasons
+  - id: b
+    text: B. Extract customer IDs from these 50 rows to fill the dimension, then classify all inputs as accepted
+  - id: c
+    text: C. Check only that customer IDs can be converted to integers and write all 50 rows to the accepted table
+  - id: d
+    text: D. Write all 50 rows to the accepted table and also copy the 2 suspicious rows to the rejected table
+  answer: a
+  explanation: "A: Correct. An independent dimension validates references, and accepted and rejected groups are mutually exclusive and cover all inputs. B: Using the data being checked to prove its own validity bypasses the rule. C: A correct type does not mean a valid reference. D: Rejected data still enters the accepted table and contaminates downstream metrics."
+- id: q4
+  objective: Check input coverage, business uniqueness, amounts, and row-by-row results together.
+  prompt: If you see 10 rows totaling 1400.00, why is field-by-field comparison still necessary?
+  options:
+  - id: a
+    text: A. A correct total guarantees that every row amount is correct; field-by-field comparison only checks sorting
+  - id: b
+    text: B. Sorting by order_id automatically repairs missing and duplicate records, so keys need no further checking
+  - id: c
+    text: C. Unique order IDs prove that amounts, customer references, and statuses are all correct
+  - id: d
+    text: D. Amount errors can cancel out, as can missing and duplicate records; uniqueness, relationships, and all fields must also be checked
+  answer: d
+  explanation: "A: Amount errors in different orders can offset each other; correct totals do not prove correct details. B: Sorting changes only display order; it does not restore missing records or remove duplicates. C: Key uniqueness checks only one aspect, not amounts, relationships, or statuses. D: Correct. Input coverage, uniqueness, fields, and relationships must be checked together; expected results must not simply copy the output under test."
+- id: q5
+  objective: Use known errors to verify that checks fail, and distinguish offline time criteria from actual freshness.
+  prompt: Which approach genuinely tests whether quality checks work?
+  options:
+  - id: a
+    text: A. After adding duplicates, change the expected row count so the check continues to pass
+  - id: b
+    text: B. Treat a successful fixed-cutoff check as proof that current ingestion latency is zero
+  - id: c
+    text: C. Adding a known duplicate should fail and restoring the data should pass; a fixed-time check does not represent real-time freshness
+  - id: d
+    text: D. Run only normal inputs and assume that all anomalies can be detected once they pass
+  answer: c
+  explanation: "A: Adjusting expectations to accommodate incorrect output prevents checks from detecting problems. B: A fixed sample time and current end-to-end ingestion latency are different metrics. C: Correct. Known errors test whether rules detect the specified problems; actual freshness also requires event, ingestion, and observation times. D: Passing normal samples does not prove that error paths work; inject targeted errors."

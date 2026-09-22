@@ -1,0 +1,5 @@
+# Author-only export/validation tools; not learner runtime dependencies.
+pymssql==2.4.1
+pyarrow==25.0.1
+PyMySQL==1.2.3
+requests==2.34.2

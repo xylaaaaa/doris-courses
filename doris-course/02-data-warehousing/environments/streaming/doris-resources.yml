@@ -1,0 +1,5 @@
+# Opt-in overlay for streaming labs; keep the base project and named volumes.
+services:
+  doris:
+    mem_limit: 12g
+    memswap_limit: 12g
