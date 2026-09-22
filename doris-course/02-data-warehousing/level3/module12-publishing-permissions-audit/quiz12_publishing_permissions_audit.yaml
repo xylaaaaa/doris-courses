@@ -1,0 +1,73 @@
+title: '模块 12：发布、权限与审计'
+description: 共 5 道单选题，不需要连接数据库。
+questions:
+- id: q1
+  objective: 定义已发布数据产品的负责人和消费者契约
+  prompt: 已发布的数据产品首先应定义什么？
+  options:
+  - id: a
+    text: A. 负责人、粒度、新鲜度、消费者和契约
+  - id: b
+    text: B. 只有图表颜色
+  - id: c
+    text: C. 只有存储路径
+  - id: d
+    text: D. 只有用户密码
+  answer: a
+  explanation: 它需要负责人、粒度、新鲜度、消费者和经过评审的契约。
+- id: q2
+  objective: 使用角色和授权，仅向消费者授予所需的表权限
+  prompt: BI 读者应该如何获得访问权限？
+  options:
+  - id: a
+    text: A. 把用户设为管理员
+  - id: b
+    text: B. 共享 root 密码
+  - id: c
+    text: C. 通过专用角色授予 SELECT
+  - id: d
+    text: D. 禁用身份认证
+  answer: c
+  explanation: 通过角色只授予所需的对象权限。
+- id: q3
+  objective: 区分数据库权限和管理权限
+  prompt: 哪项说法正确？
+  options:
+  - id: a
+    text: A. 所有授权的风险都相同
+  - id: b
+    text: B. 数据访问权限和管理权限不同
+  - id: c
+    text: C. SELECT 会自动授予 DROP
+  - id: d
+    text: D. 角色不能拥有表权限
+  answer: b
+  explanation: 对象级 SELECT 与管理权限不同。
+- id: q4
+  objective: 检查授权并记录发布审计轨迹
+  prompt: 哪些信息可作为发布审计证据？
+  options:
+  - id: a
+    text: A. 只有 SQL 客户端版本
+  - id: b
+    text: B. 只有行数
+  - id: c
+    text: C. 只有看板 URL
+  - id: d
+    text: D. 身份、对象、权限、原因和发布证据
+  answer: d
+  explanation: 记录身份、对象、权限、原因和发布标识。
+- id: q5
+  objective: 在不改变数据产品的情况下撤销访问权限
+  prompt: 撤销角色会改变什么？
+  options:
+  - id: a
+    text: A. 消费者授权，不改变数据产品本身
+  - id: b
+    text: B. 表中的每一行
+  - id: c
+    text: C. 表粒度
+  - id: d
+    text: D. 存储引擎
+  answer: a
+  explanation: 它会改变访问权限，同时保持已发布数据对象不变。

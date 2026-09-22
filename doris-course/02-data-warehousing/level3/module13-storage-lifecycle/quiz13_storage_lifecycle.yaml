@@ -1,0 +1,75 @@
+title: '模块 13：存储与生命周期管理'
+description: 共 5 道单选题，不需要连接数据库。
+questions:
+- id: q1
+  objective: 根据数据保留语义选择分区边界
+  prompt: 什么应决定分区边界？
+  options:
+  - id: a
+    text: A. 随机的 Bucket 数量
+  - id: b
+    text: B. 保留策略和查询时间语义
+  - id: c
+    text: C. 看板颜色
+  - id: d
+    text: D. SQL 客户端数量
+  answer: b
+  explanation: 分区边界应由保留策略和查询时间语义决定。
+- id: q2
+  objective: 检查分区、Bucket、Tablet 和副本元数据
+  prompt: 哪些命令可以提供布局证据？
+  options:
+  - id: a
+    text: A. SHOW PARTITIONS、SHOW TABLETS 和 SHOW CREATE TABLE
+  - id: b
+    text: B. 只有 SELECT COUNT(*)
+  - id: c
+    text: C. 只有客户端计时器
+  - id: d
+    text: D. DROP TABLE
+  answer: a
+  explanation: 这三个命令提供互补的布局证据。
+
+- id: q3
+  objective: 在不截断整表的情况下执行分区级保留操作
+  prompt: 为什么时间分区数据适合使用分区级保留？
+  options:
+  - id: a
+    text: A. 它总会改变每个分区
+  - id: b
+    text: B. 它会禁用 Compaction
+  - id: c
+    text: C. 它将操作限制在选定分区
+  - id: d
+    text: D. 它不再需要备份
+  answer: c
+  explanation: 它将逻辑操作限制在预期的保留边界内。
+- id: q4
+  objective: 解释 Rowset、Compaction 与物理空间之间的关系
+  prompt: Compaction 做什么？
+  options:
+  - id: a
+    text: A. 它会自动改变业务粒度
+  - id: b
+    text: B. 它会授予表权限
+  - id: c
+    text: C. 它能保证查询改写
+  - id: d
+    text: D. 它会在逻辑变更后重新组织物理存储
+  answer: d
+  explanation: 后台 Compaction 会重新组织物理文件；逻辑可见性
+    与物理回收是两个不同问题。
+- id: q5
+  objective: 编写包含回滚或恢复检查的维护 Runbook
+  prompt: 维护 Runbook 应包含什么？
+  options:
+  - id: a
+    text: A. 范围、前置检查、变更、证据和恢复路径
+  - id: b
+    text: B. 只有 ALTER 语句
+  - id: c
+    text: C. 只有截图
+  - id: d
+    text: D. 只有预期行数
+  answer: a
+  explanation: Runbook 应写明范围、前置检查、变更、证据和恢复路径。
