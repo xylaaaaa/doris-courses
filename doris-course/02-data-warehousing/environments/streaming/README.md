@@ -9,13 +9,13 @@ These independent optional labs do not change the completion requirements for th
 
 Use Linux Docker Engine or Docker Desktop with Linux containers, Docker Compose v2, and the course Python dependencies. Run Jupyter on the Docker host; use SSH port forwarding for remote browser access. This configuration is not for remote Docker daemons or production clusters.
 
-The streaming profile requires **at least 18 GiB of Docker-visible RAM and 4 CPUs**: a 12 GiB Doris container cap plus a 6 GiB planning budget for dependencies. Also allow at least 8 GB of additional disk space. This is a conservative lab profile, not a measured minimum or a production sizing claim. On Docker Desktop, allocate these resources to the Docker VM, not just the physical host.
+The optional labs use different resource profiles. The Kafka-only lab requires **at least 10 GiB of Docker-visible RAM and 2 CPUs**; it uses an 8 GiB Doris cap and limits Kafka's JVM to 512 MiB. The MySQL/Flink CDC lab requires **at least 18 GiB and 4 CPUs** because it runs Doris, MySQL, JobManager, and TaskManager together. Also allow at least 8 GB of additional disk space. These are conservative course profiles, not production sizing claims. On Docker Desktop, allocate these resources to the Docker VM, not just the physical host.
 
-The first notebook cell runs `docker info` and rejects insufficient total capacity before starting containers. It does not measure free memory or reserve resources. On a shared host, check current memory pressure and disk space yourself; meeting the total-capacity check does not guarantee success. Initial startup needs Docker Hub and Maven Central access.
+The first notebook cell runs `docker info` and rejects insufficient total capacity before starting containers. It selects the Kafka or CDC profile explicitly; it does not measure free memory or reserve resources. On a shared host, check current memory pressure and disk space yourself; meeting the total-capacity check does not guarantee success. Initial startup needs Docker Hub and Maven Central access.
 
-Start Jupyter from the course root, open a notebook, and run its cells in order. `prepare_environment(start=True, streaming=True)` applies the committed `doris-resources.yml` overlay, then starts only the selected streaming dependency profile.
+Start Jupyter from the course root, open a notebook, and run its cells in order. The notebooks pass `streaming_profile="kafka"` or `streaming_profile="cdc"` to select the matching resource overlay, then start only the selected streaming dependency profile.
 
-**Finish other course work before the first streaming startup.** Applying the overlay may recreate the existing course Doris container; it retains the same Compose project, FE metadata volume, BE storage volume, and ports. It does not delete data volumes. The overlay sets both memory and memory-plus-swap limits to 12 GiB, matching the previously validated local setting rather than relying on an undocumented `docker update`.
+**Finish other course work before the first streaming startup.** Applying the overlay may recreate the existing course Doris container; it retains the same Compose project, FE metadata volume, BE storage volume, and ports. It does not delete data volumes. The Kafka notebook applies `doris-resources-kafka.yml` and limits Doris to 8 GiB; the CDC notebook applies `doris-resources.yml` and limits Doris to 12 GiB. Both overlays set memory and memory-plus-swap limits explicitly rather than relying on an undocumented `docker update`.
 
 Both labs reuse `environments/single-node`. Do not run two instances of the same lab concurrently, or start a main-course notebook while a streaming lab is running: the main-course startup uses the base configuration without this overlay and may recreate the container without the cap.
 
@@ -34,16 +34,16 @@ Both labs reuse `environments/single-node`. Do not run two instances of the same
 From the course root, with the course Python environment activated:
 
 ```bash
-# Capacity preflight; raises before startup if Docker capacity is insufficient.
-python -c 'from dw_course.streaming import check_resources; check_resources()'
+# Kafka capacity preflight; use check_resources("cdc") for the CDC lab.
+python -c 'from dw_course.streaming import check_resources; check_resources("kafka")'
 # Check Docker disk usage and current container memory use as well.
 docker system df
 docker stats --no-stream
-# Apply the same resource overlay as the notebooks; retain the project and volumes.
+# Kafka notebook overlay; retain the project and volumes.
 docker compose --project-name doris-warehousing-course \
   -f environments/single-node/compose.yml \
-  -f environments/streaming/doris-resources.yml up -d --wait --wait-timeout 300
-# Confirm both limits: each should be 12884901888 bytes.
+  -f environments/streaming/doris-resources-kafka.yml up -d --wait --wait-timeout 300
+# For Kafka, the Doris limit should be 8589934592 bytes. The CDC overlay uses 12884901888.
 docker inspect doris-warehousing-course-doris-1 \
   --format 'Memory={{.HostConfig.Memory}} MemorySwap={{.HostConfig.MemorySwap}}'
 # Start only the dependencies for the lab you selected.
@@ -76,7 +76,7 @@ docker compose -f environments/streaming/compose.yml --profile kafka --profile c
 docker compose -f environments/streaming/compose.yml logs --tail=100 kafka mysql jobmanager taskmanager
 ```
 
-- **Resource preflight failure:** increase Docker VM resources or choose a host meeting the lab profile. Do not disable the check to claim the profile is validated on a smaller machine.
+- **Resource preflight failure:** use the Kafka profile for Lab 5A, or increase Docker VM resources for the CDC lab. Do not disable the check to claim the profile is validated on a smaller machine. A Docker Desktop allocation below 10 GiB cannot run the Kafka profile reliably.
 - **`MEM_LIMIT_EXCEEDED`:** confirm the Doris limits with the inspect command above, then check host/VM free memory, container usage, and Doris memory watermarks. If another main-course startup removed the overlay, finish active work and reapply the documented overlay. Do not disable memory protection or delete volumes to bypass the error.
 - **Routine Load failure:** data waits report unexpected PAUSED/STOPPED/CANCELLED states with the job name, `ReasonOfStateChanged`, and `ErrorLogUrls`. Run the supplied `SHOW ALL ROUTINE LOAD FOR ...` statement for details. Confirm that Doris can reach the advertised broker address. Intentional pause verification uses a direct query, not the healthy-job wait.
 - **Interrupted Kafka notebook:** the notebook stops stale jobs matching its own `course_orders_<12-hex-chars>` name and `ext_kafka_orders` target before rebuilding the table. If it finds another job, it refuses to stop it and asks you to inspect it; do not stop jobs in other databases.

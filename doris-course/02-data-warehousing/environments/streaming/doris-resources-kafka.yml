@@ -1,0 +1,5 @@
+# Lightweight overlay for the Kafka-only optional lab.
+services:
+  doris:
+    mem_limit: 8g
+    memswap_limit: 8g

@@ -28,9 +28,13 @@ STARTUP_STEPS = {
 }
 
 
-def compose_command(*arguments, streaming=False):
-    override = (["--file", str(COURSE_ROOT / "environments/streaming/doris-resources.yml")]
-                if streaming else [])
+def compose_command(*arguments, streaming=False, streaming_profile=None):
+    override = []
+    if streaming:
+        override_name = (
+            "doris-resources-kafka.yml" if streaming_profile == "kafka" else "doris-resources.yml"
+        )
+        override = ["--file", str(COURSE_ROOT / "environments/streaming" / override_name)]
     return [
         "docker", "compose", "--project-name", PROJECT,
         "--file", str(COMPOSE_FILE), *override, *arguments,
@@ -64,16 +68,18 @@ def _verify_sql():
         connection.close()
 
 
-def prepare_environment(*, start=False, streaming=False):
+def prepare_environment(*, start=False, streaming=False, streaming_profile=None):
     """Start on explicit opt-in and report each completed or failed step."""
     if not start and os.environ.get("DW_START_SANDBOX") != "yes":
         raise RuntimeError("Set DW_START_SANDBOX=yes only to start course 02's Docker sandbox")
     if streaming:
         from .streaming import check_resources
-        check_resources()
+        streaming_profile = streaming_profile or "cdc"
+        check_resources(streaming_profile)
 
     def command(*arguments):
-        return compose_command(*arguments, streaming=True) if streaming else compose_command(*arguments)
+        return (compose_command(*arguments, streaming=True, streaming_profile=streaming_profile)
+                if streaming else compose_command(*arguments))
 
     progress = WorkflowProgress("Prepare the Doris lab environment", STARTUP_STEPS)
     try:

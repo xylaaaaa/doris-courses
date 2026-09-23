@@ -213,16 +213,31 @@ class StreamingTest(unittest.TestCase):
         self.assertIn("doris-warehousing-course", command)
         self.assertEqual(command[-1], "up")
 
+    def test_kafka_resource_profile_uses_lightweight_overlay(self):
+        overlay = ROOT / "environments/streaming/doris-resources-kafka.yml"
+        config = yaml.safe_load(overlay.read_text())
+        self.assertEqual(config["services"]["doris"], {"mem_limit": "8g", "memswap_limit": "8g"})
+        kafka = yaml.safe_load(streaming.COMPOSE.read_text())["services"]["kafka"]
+        self.assertEqual(kafka["mem_limit"], "1g")
+        self.assertEqual(kafka["memswap_limit"], "1g")
+        self.assertEqual(kafka["environment"]["KAFKA_HEAP_OPTS"], "-Xms256m -Xmx512m")
+        command = docker_runtime.compose_command("up", streaming=True, streaming_profile="kafka")
+        self.assertIn(str(overlay), command)
+
     def test_resource_preflight_capacity(self):
-        for gib, cpus, succeeds in [(18, 4, True), (17, 4, False), (32, 2, False)]:
+        for profile, gib, cpus, succeeds, minimum_memory, minimum_cpus in [
+            ("kafka", 10, 2, True, 10, 2), ("kafka", 9, 2, False, 10, 2),
+            ("kafka", 10, 1, False, 10, 2), ("cdc", 18, 4, True, 18, 4),
+            ("cdc", 17, 4, False, 18, 4), ("cdc", 32, 2, False, 18, 4),
+        ]:
             with self.subTest(gib=gib, cpus=cpus), patch.object(streaming.subprocess, "run", return_value=Mock(
                 stdout=json.dumps({"MemTotal": gib * 1024**3, "NCPU": cpus})
             )):
                 if succeeds:
-                    streaming.check_resources()
+                    streaming.check_resources(profile)
                 else:
-                    with self.assertRaisesRegex(RuntimeError, "18 GiB RAM and 4 CPUs"):
-                        streaming.check_resources()
+                    with self.assertRaisesRegex(RuntimeError, f"{minimum_memory} GiB RAM and {minimum_cpus} CPUs"):
+                        streaming.check_resources(profile)
 
     def test_resource_failure_precedes_container_start(self):
         with patch.object(streaming, "check_resources", side_effect=RuntimeError("capacity")), patch.object(docker_runtime, "_run") as run:
@@ -232,19 +247,20 @@ class StreamingTest(unittest.TestCase):
 
     def test_streaming_startup_uses_overlay_for_every_compose_command(self):
         with patch.object(streaming, "check_resources") as check, patch.object(docker_runtime, "_run") as run, patch.object(docker_runtime, "_verify_sql"), patch.object(docker_runtime, "WorkflowProgress"):
-            docker_runtime.prepare_environment(start=True, streaming=True)
+            docker_runtime.prepare_environment(start=True, streaming=True, streaming_profile="kafka")
             check.assert_called_once()
+            check.assert_called_once_with("kafka")
             commands = [call.args[0] for call in run.call_args_list if call.args[0][:2] == ["docker", "compose"] and "--project-name" in call.args[0]]
             self.assertEqual(len(commands), 4)
             for command in commands:
-                self.assertIn(str(ROOT / "environments/streaming/doris-resources.yml"), command)
+                self.assertIn(str(ROOT / "environments/streaming/doris-resources-kafka.yml"), command)
 
     def test_optional_notebooks_are_english_and_use_checked_waits(self):
         for path in (ROOT / "level1/module05-ingestion").glob("optional5_*.ipynb"):
             notebook = nbformat.read(path, 4)
             source = "\n".join(cell.source for cell in notebook.cells)
             self.assertNotRegex(source, r"[\u4e00-\u9fff]")
-            self.assertIn("prepare_environment(start=True, streaming=True)", source)
+            self.assertRegex(source, r'prepare_environment\(start=True, streaming=True, streaming_profile="(?:kafka|cdc)"\)')
             for cell in notebook.cells:
                 if cell.cell_type == "code":
                     for node in ast.walk(ast.parse(cell.source)):

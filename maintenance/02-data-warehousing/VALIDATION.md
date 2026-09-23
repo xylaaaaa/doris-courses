@@ -17,7 +17,7 @@ This follow-up fixes the first two review findings. Startup output buffering rem
 
 - Data waits now require a job-health callback. Kafka polls include `SHOW ALL ROUTINE LOAD FOR ...` and report unexpected PAUSED/STOPPED/CANCELLED states, the job name, state-change reason, and error URLs. Intentional pause checks still query the table directly.
 - Flink data and checkpoint waits check the job on every poll. An old completed checkpoint cannot hide a failed or unexpectedly finished job. Diagnostics include the job ID and exception-page URL.
-- `prepare_environment(start=True, streaming=True)` checks Docker-visible total RAM/CPU before startup and applies the committed streaming-only resource overlay (12 GiB memory and memory-plus-swap limits). Base main-course startup is unchanged. The profile requires 18 GiB total Docker capacity and 4 CPUs; this is a conservative preparation policy, not a measured minimum or a check of free RAM. README commands explain configuration, inspection, and shared-host pressure.
+- `prepare_environment(start=True, streaming=True, streaming_profile=...)` checks Docker-visible total RAM/CPU before startup and applies the matching resource overlay. The Kafka profile uses an 8 GiB Doris limit and requires 10 GiB/2 CPUs; the CDC profile retains the 12 GiB Doris limit and requires 18 GiB/4 CPUs. Base main-course startup is unchanged. These are conservative preparation policies, not checks of free RAM. README commands explain configuration, inspection, and shared-host pressure.
 - Both optional Notebook bodies, code-cell labels, and the streaming environment README are now English. Other course lessons, main notebooks, and shared Chinese display widgets have not been translated in this follow-up.
 
 ### Evidence
