@@ -100,6 +100,18 @@ class Level2MaterialsTest(unittest.TestCase):
                 self.assertIn(section, guide, module)
             self.assertGreaterEqual(len(guide), 4000, module)
 
+    def test_level2_labs_explain_and_verify_the_work(self):
+        required_markdown = ("你将完成什么", "前置条件", "独立练习", "参考解释", "实验回顾")
+        for path in sorted(LEVEL2.glob("module*/lab*.ipynb")):
+            notebook = nbformat.read(path, as_version=4)
+            markdown = "\n".join(cell.source for cell in notebook.cells if cell.cell_type == "markdown")
+            source = "\n".join(cell.source for cell in notebook.cells if cell.cell_type == "code")
+            for section in required_markdown:
+                self.assertIn(section, markdown, path)
+            self.assertGreaterEqual(markdown.count("## "), 5, path)
+            self.assertIn("expect(", source, path)
+            self.assertIn("TODO:", source, path)
+
 
 if __name__ == "__main__":
     unittest.main()

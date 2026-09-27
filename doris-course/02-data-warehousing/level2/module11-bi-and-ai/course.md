@@ -212,7 +212,7 @@ FROM bi_order_metrics_l2;
 
 ## 动手实验：发布稳定的消费者接口
 
-请先完成 Lab 8–10，再打开 Lab 11。实验使用同一个专用 `dw_course_l1_*` 数据库，重建 `bi_order_metrics_l2`，并将查询结果以表格输出。Lab 11 的输入来自 Module 10 服务表，所以实验顺序和数据依赖很重要。
+请先完成 Lab 10，再打开 Lab 11。实验使用同一个专用 `dw_course_l1_*` 数据库，重建 `bi_order_metrics_l2`，并将查询结果以表格输出。Lab 11 的输入来自 Module 10 服务表；Lab 8–9 的对象不是本实验的直接输入，所以实验顺序和数据依赖应以 Notebook 的前置检查为准。
 
 ### 独立练习
 

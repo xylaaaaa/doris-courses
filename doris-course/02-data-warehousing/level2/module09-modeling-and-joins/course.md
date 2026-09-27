@@ -244,7 +244,7 @@ ORDER BY stage;
 
 ## 动手实验：订单事实与客户维度
 
-打开 [Lab 9](lab9_modeling_and_joins.ipynb)，在已完成 Lab 5 的同一专用库中依次建事实表和维表、关联客户、检查缺失维度、查看聚合和执行计划。初始化只重建本模块 `_l2` 表；逐段执行 INSERT 前注意重复追加语义。
+打开 [Lab 9](lab9_modeling_and_joins.ipynb)，在已完成 Lab 5 和 Lab 6 的同一专用库中依次建事实表和维表、关联客户、检查缺失维度、查看聚合和执行计划。Lab 5 提供 `orders_imported`，Lab 6 提供经过质量处理的 `customers`；Notebook 会在写入前检查这两项前置数据。初始化只重建本模块 `_l2` 表；逐段执行 INSERT 前注意重复追加语义。
 
 ### 数据说明与验收
 
