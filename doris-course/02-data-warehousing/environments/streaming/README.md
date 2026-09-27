@@ -9,7 +9,7 @@ These independent optional labs do not change the completion requirements for th
 
 Use Linux Docker Engine or Docker Desktop with Linux containers, Docker Compose v2, and the course Python dependencies. Run Jupyter on the Docker host; use SSH port forwarding for remote browser access. This configuration is not for remote Docker daemons or production clusters.
 
-The streaming profile requires **at least 18 GiB of Docker-visible RAM and 4 CPUs**: a 12 GiB Doris container cap plus a 6 GiB planning budget for dependencies. Also allow at least 8 GB of additional disk space. This is a conservative lab profile, not a measured minimum or a production sizing claim. On Docker Desktop, allocate these resources to the Docker VM, not just the physical host.
+The Flink CDC profile requires **at least 18 GiB of Docker-visible RAM and 4 CPUs**: a 12 GiB Doris container cap plus a 6 GiB planning budget for dependencies. The Kafka profile can run on a development machine with **14 GiB of Docker-visible RAM and 4 CPUs** because it adds only one broker. Also allow at least 8 GB of additional disk space. These are conservative lab profiles, not measured minimums or production sizing claims. On Docker Desktop, allocate these resources to the Docker VM, not just the physical host.
 
 The first notebook cell runs `docker info` and rejects insufficient total capacity before starting containers. It does not measure free memory or reserve resources. On a shared host, check current memory pressure and disk space yourself; meeting the total-capacity check does not guarantee success. Initial startup needs Docker Hub and Maven Central access.
 
@@ -34,8 +34,9 @@ Both labs reuse `environments/single-node`. Do not run two instances of the same
 From the course root, with the course Python environment activated:
 
 ```bash
-# Capacity preflight; raises before startup if Docker capacity is insufficient.
-python -c 'from dw_course.streaming import check_resources; check_resources()'
+# Capacity preflight; choose the profile you intend to run.
+python -c 'from dw_course.streaming import check_resources; check_resources("kafka")'
+# Use check_resources("cdc") for the Flink CDC profile.
 # Check Docker disk usage and current container memory use as well.
 docker system df
 docker stats --no-stream

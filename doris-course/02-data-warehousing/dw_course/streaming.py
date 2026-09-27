@@ -106,8 +106,21 @@ def wait_for(read, accepts, *, description, timeout=180, check_health=None):
     raise TimeoutError(f"{description}: last observation = {last!r}")
 
 
-def check_resources():
-    """Check Docker daemon capacity, not available RAM or a resource reservation."""
+RESOURCE_REQUIREMENTS = {
+    # Kafka only adds one broker to the 12 GiB Doris cap. This keeps the
+    # optional lab usable on a 16 GiB development Mac while leaving headroom
+    # for Docker Desktop and the host.
+    "kafka": (14, 4, "12 GiB Doris cap plus 2 GiB Kafka budget"),
+    "cdc": (18, 4, "12 GiB Doris cap plus 6 GiB dependency budget"),
+}
+
+
+def check_resources(profile="cdc"):
+    """Check Docker daemon capacity, not available RAM or a reservation."""
+    try:
+        required_memory, required_cpus, budget = RESOURCE_REQUIREMENTS[profile]
+    except KeyError as error:
+        raise ValueError("Choose kafka or cdc") from error
     result = subprocess.run(
         ["docker", "info", "--format", "{{json .}}"],
         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -117,10 +130,10 @@ def check_resources():
     memory_gib = info["MemTotal"] / (1024 ** 3)
     cpus = info["NCPU"]
     print(f"Docker capacity: {memory_gib:.1f} GiB RAM, {cpus} CPUs", flush=True)
-    if memory_gib < 18 or cpus < 4:
+    if memory_gib < required_memory or cpus < required_cpus:
         raise RuntimeError(
-            "This streaming lab profile requires Docker capacity of at least "
-            "18 GiB RAM and 4 CPUs (12 GiB Doris cap plus 6 GiB dependency budget). "
+            f"The {profile} streaming lab requires Docker capacity of at least "
+            f"{required_memory} GiB RAM and {required_cpus} CPUs ({budget}). "
             "Increase Docker Desktop resources or use a suitable local host. "
             "See environments/streaming/README.md. No containers were started."
         )

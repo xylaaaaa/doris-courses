@@ -82,13 +82,13 @@ def _verify_sql():
         connection.close()
 
 
-def prepare_environment(*, start=False, streaming=False):
+def prepare_environment(*, start=False, streaming=False, streaming_profile=None):
     """Start on explicit opt-in and report each completed or failed step."""
     if not start and os.environ.get("DW_START_SANDBOX") != "yes":
         raise RuntimeError("Set DW_START_SANDBOX=yes only to start course 02's Docker sandbox")
     if streaming:
         from .streaming import check_resources
-        check_resources()
+        check_resources(streaming_profile or "cdc")
 
     def command(*arguments):
         return compose_command(*arguments, streaming=True) if streaming else compose_command(*arguments)

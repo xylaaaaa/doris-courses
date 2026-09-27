@@ -214,15 +214,20 @@ class StreamingTest(unittest.TestCase):
         self.assertEqual(command[-1], "up")
 
     def test_resource_preflight_capacity(self):
-        for gib, cpus, succeeds in [(18, 4, True), (17, 4, False), (32, 2, False)]:
+        cases = [
+            ("kafka", 14, 4, True), ("kafka", 13, 4, False),
+            ("cdc", 18, 4, True), ("cdc", 17, 4, False),
+            ("cdc", 32, 2, False),
+        ]
+        for profile, gib, cpus, succeeds in cases:
             with self.subTest(gib=gib, cpus=cpus), patch.object(streaming.subprocess, "run", return_value=Mock(
                 stdout=json.dumps({"MemTotal": gib * 1024**3, "NCPU": cpus})
             )):
                 if succeeds:
-                    streaming.check_resources()
+                    streaming.check_resources(profile)
                 else:
-                    with self.assertRaisesRegex(RuntimeError, "18 GiB RAM and 4 CPUs"):
-                        streaming.check_resources()
+                    with self.assertRaisesRegex(RuntimeError, f"{profile} streaming lab requires"):
+                        streaming.check_resources(profile)
 
     def test_resource_failure_precedes_container_start(self):
         with patch.object(streaming, "check_resources", side_effect=RuntimeError("capacity")), patch.object(docker_runtime, "_run") as run:
@@ -244,7 +249,7 @@ class StreamingTest(unittest.TestCase):
             notebook = nbformat.read(path, 4)
             source = "\n".join(cell.source for cell in notebook.cells)
             self.assertNotRegex(source, r"[\u4e00-\u9fff]")
-            self.assertIn("prepare_environment(start=True, streaming=True)", source)
+            self.assertRegex(source, r"prepare_environment\(start=True, streaming=True, streaming_profile=\"(?:kafka|cdc)\"\)")
             for cell in notebook.cells:
                 if cell.cell_type == "code":
                     for node in ast.walk(ast.parse(cell.source)):
