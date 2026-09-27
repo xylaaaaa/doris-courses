@@ -57,11 +57,11 @@ class WorkflowProgress:
         else:
             print(f"Completed: {self.title}", flush=True)
 
-    def fail(self, detail):
+    def fail(self, detail, *, opened=True):
         self.log(detail)
         if self.notebook:
             self._render("failure", detail)
-            show_log("View the failure reason and complete logs", "\n".join(self.logs), opened=True)
+            show_log("View the failure reason and complete logs", "\n".join(self.logs), opened=opened)
         else:
             print("\n".join(self.logs), flush=True)
 

@@ -8,6 +8,7 @@ import pymysql
 
 from .runtime import COURSE_ROOT, WarehouseLab
 from .ui import WorkflowProgress
+from .onboarding import SetupRequired
 
 COMPOSE_FILE = COURSE_ROOT / "environments/single-node/compose.yml"
 PROJECT = "doris-warehousing-course"
@@ -39,10 +40,27 @@ def compose_command(*arguments, streaming=False):
 
 def _run(command, progress, *, timeout=30):
     progress.log("$ " + shlex.join(command))
-    result = subprocess.run(
-        command, check=True, timeout=timeout, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-    )
+    try:
+        result = subprocess.run(
+            command, check=True, timeout=timeout, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        if command[:2] == ["docker", "info"]:
+            message = (
+                "Docker was not found. Install Docker Desktop (macOS/Windows) or Docker Engine "
+                "with Compose (Linux) on the machine running Jupyter. Open a new terminal, "
+                "check `docker info`, then restart Jupyter and rerun this cell."
+                if isinstance(error, FileNotFoundError) else
+                "Docker is not ready. Start Docker Desktop or Docker Engine on the machine "
+                "running Jupyter, finish first-time setup, and wait for `docker info` to succeed. "
+                "Then rerun this cell."
+            )
+        elif command == ["docker", "compose", "version"]:
+            message = "Docker Compose is unavailable. Install the Compose plugin or repair Docker Desktop, then check `docker compose version` and rerun this cell."
+        else:
+            raise
+        raise SetupRequired(message, detail=str(error) + "\n" + str(getattr(error, "output", "") or "")) from None
     progress.log(result.stdout)
 
 
@@ -101,14 +119,59 @@ def prepare_environment(*, start=False, streaming=False):
                 output = output.decode("utf-8", errors="replace")
             if output:
                 detail += "\n" + output
-        progress.fail(detail)
+        progress.fail(detail, opened=not isinstance(error, SetupRequired))
         raise
     os.environ.update(CONNECTION)
     progress.finish()
     return dict(CONNECTION)
 
 
-def connect_sandbox():
+def connect_sandbox(*, module=None):
     """Connect this notebook to the course container without starting Docker."""
     os.environ.update(CONNECTION)
-    return WarehouseLab(allow_writes=True)
+    try:
+        lab = WarehouseLab(allow_writes=True)
+    except pymysql.err.OperationalError as error:
+        if error.args[0] not in (2002, 2003):
+            raise
+        # Diagnose only on connection failure; a healthy sandbox needs no Docker CLI call.
+        try:
+            _run(["docker", "info", "--format", "{{.ServerVersion}}"],
+                 WorkflowProgress("Check Docker", {1: "Check Docker"}), timeout=10)
+        except SetupRequired:
+            raise
+        raise SetupRequired(
+            "Doris is not reachable at 127.0.0.1:52030. Open Lab 1, run Initialize the Lab Tools, "
+            "then Start and Connect. Wait for connection_ok = 1, return here, and rerun this cell. "
+            "Opening Jupyter alone does not start the database.",
+            labs=(1,), detail=str(error),
+        ) from None
+    try:
+        _check_prerequisites(lab, module)
+    except Exception:
+        lab.close()
+        raise
+    return lab
+
+
+def _check_prerequisites(lab, module):
+    requirements = {
+        6: {"wwi_customers": (663, 5)},
+        7: {"wwi_products": (227, 5), "customers": (663, 6), "orders_clean": (10, 6)},
+    }.get(module, {})
+    if not requirements:
+        return
+    existing = {row[0] for row in lab.query("SHOW TABLES")}
+    missing = []
+    upstream = set()
+    for table, (count, source) in requirements.items():
+        if table not in existing or lab.query(f"SELECT COUNT(*) FROM {table}")[0][0] != count:
+            missing.append(table)
+            upstream.add(source)
+    if missing:
+        raise SetupRequired(
+            f"Lab {module} needs data in {lab.database}: {', '.join(missing)} is missing or incomplete. "
+            "Complete Lab 5 (historical import), then Lab 6 (quality checks) if needed, "
+            "in this same database. Return here and rerun this cell. No lab tables have been reset.",
+            labs=tuple(sorted(upstream)),
+        )

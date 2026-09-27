@@ -8,7 +8,7 @@ You need to be able to read basic SQL; the first module walks you through connec
 
 ## Start Here
 
-1. Read [Environment Setup](environments/single-node/README.md) to prepare your Python environment.
+1. Read [First-time setup](GETTING_STARTED.md), then use [Environment Setup](environments/single-node/README.md) to prepare your Python environment.
 2. Open the [Level 1 Learning Guide](level1/README.md) and start with the Module 1 lesson.
 3. In each module, complete the lesson, Lab, and Quiz in that order. Run the Labs in module order; Quizzes do not require a database.
 

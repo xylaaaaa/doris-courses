@@ -630,7 +630,7 @@ class AlignmentTest(unittest.TestCase):
         for path in (COURSE_ROOT / "level1").glob("*/lab*.ipynb"):
             notebook = nbformat.read(path, as_version=4)
             code = "\n".join(c.source for c in notebook.cells if c.cell_type == "code")
-            self.assertIn("lab = connect_sandbox()", code, path)
+            self.assertRegex(code, r"lab = connect_sandbox\(\)" if path.parent.name not in {"module06-data-quality", "module07-state-changes"} else r"lab = connect_sandbox\(module=[67]\)", path)
             self.assertNotIn("USE_DOCKER", code, path)
             self.assertNotIn("FE_HOST =", code, path)
             self.assertNotIn("ALLOW_LAB_WRITES =", code, path)
