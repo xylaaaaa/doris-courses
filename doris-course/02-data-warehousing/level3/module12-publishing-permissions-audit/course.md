@@ -4,8 +4,8 @@
 | --- | --- |
 | 所属课程 | Data Warehousing with Apache Doris · Level 3 |
 | 产品范围 | Apache Doris 4.x；示例使用课程单节点沙箱 |
-| 前置知识 | Level 1 的订单与质量表；Level 2 的服务指标和消费者视图 |
-| 建议用时 | 约 60 分钟：阅读 25 分钟、实验 30 分钟、测验 5 分钟 |
+| 前置知识 | Level 1 的订单表；Level 2 的消费者视图仅用于独立练习 |
+| 建议用时 | 约 65 分钟：阅读 30 分钟、实验 30 分钟、测验 5 分钟 |
 
 [Level 3 目录](../README.md) · [打开 Lab 12](lab12_publishing_permissions_audit.ipynb) · [打开 Quiz 12](quiz12_publishing_permissions_audit.ipynb)
 
@@ -61,7 +61,7 @@ Doris 内置授权可以理解成三层关系：**权限 → 角色 → 用户**
 
 ### 权限范围从大到小
 
-授权语句的对象范围必须与消费者需求一致。范围越大，误用和泄露影响越大；本实验把权限限制在当前课程数据库的 `orders_imported` 表。
+授权语句的对象范围必须与消费者需求一致。范围越大，误用和泄露影响越大。本实验为减少前置依赖，选用当前课程数据库的 `orders_imported` 表演示表级授权；它是订单明细，不是正式交付给 BI 的服务视图。
 
 ```sql
 -- 只读指定表；catalog 使用 internal，数据库使用当前课程库
@@ -100,7 +100,7 @@ DROP ROLE IF EXISTS course_bi_reader_l3;
 
 先撤销权限，再删除临时角色；执行前仍要确认角色没有被其他消费者使用。`DROP ROLE` 不是“撤销所有历史业务责任”的替代品，生产环境应保留审计记录和审批信息。
 
-Doris 的 [REVOKE FROM](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/REVOKE-FROM) 和 [DROP ROLE](https://doris.apache.org/docs/dev/sql-manual/sql-statements/account-management/DROP-ROLE/) 文档说明了语法和权限要求。课程实验最后提供清理步骤，避免反复运行在沙箱中积累角色。
+Doris 的 [REVOKE FROM](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/REVOKE-FROM) 和 [DROP ROLE](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/DROP-ROLE/) 文档说明了语法和权限要求。课程实验最后提供清理步骤，避免反复运行在沙箱中积累角色。
 
 ## 12.5 细粒度访问的边界
 
@@ -120,7 +120,7 @@ Doris 的 [REVOKE FROM](https://doris.apache.org/docs/4.x/sql-manual/sql-stateme
 
 ### 前置条件和安全说明
 
-Lab 12 需要 Level 1 Lab 5 的 `orders_imported`，否则无法演示对真实课程对象的最小授权。Notebook 会在变更前检查表是否存在。它只使用专用的 `dw_course_l1_*` 数据库，不创建真实用户，不打印密码，也不会向共享生产对象授权。
+Lab 12 只需 Level 1 Lab 5 的 `orders_imported` 即可运行；Level 2 的服务视图用于后面的独立练习。Notebook 会在变更前检查表是否存在。它只使用专用的 `dw_course_l1_*` 数据库，不创建真实用户，不打印密码，也不会向共享生产对象授权。实验验证的是角色配置和数据值，没有将角色授给真实用户，也没有验证消费者登录后的访问结果。
 
 ### 完成标准
 
@@ -144,7 +144,7 @@ Lab 12 需要 Level 1 Lab 5 的 `orders_imported`，否则无法演示对真实�
 <details>
 <summary>参考解释</summary>
 
-应把权限限制在目标数据库的目标视图或表，并只授予 `SELECT_PRIV`。发布前后分别保存 `SHOW GRANTS`/`SHOW ROLES` 和对象范围证据；失败时撤销已授予的对象权限，再清理临时角色。全局范围会把当前和未来对象一起暴露，超出 BI 的最小需求，也增加误授权影响面。
+应把权限限制在目标数据库的 `bi_order_metrics_l2` 视图，并只授予 `SELECT_PRIV`，不能顺手授予订单明细表。发布前后分别保存 `SHOW GRANTS`/`SHOW ROLES` 和对象范围证据；若在隔离环境实际发布，还应以测试消费者身份验证“视图可读、明细不可读”。失败时撤销已授予的对象权限，再清理临时角色。全局范围会把当前和未来对象一起暴露，超出 BI 的最小需求，也增加误授权影响面。
 
 </details>
 

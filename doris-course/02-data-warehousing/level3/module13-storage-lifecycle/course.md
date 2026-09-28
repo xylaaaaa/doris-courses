@@ -11,7 +11,7 @@
 
 ## 单元目标
 
-数据生命周期不是简单地执行 `DELETE`。在 Doris 中，分区、Bucket、Tablet、Rowset 和 Compaction 处于不同层次，分别影响数据裁剪、并行度、复制、版本管理和物理存储。运维人员应先记录对象和影响范围，再选择分区级维护，并分别验证逻辑数据和物理状态。
+数据生命周期不是简单地执行 `DELETE`。在 Doris 中，分区、Bucket、Tablet、Rowset 和 Compaction 处于不同层次，分别影响数据裁剪、并行度、复制、版本管理和物理存储。运维人员应先记录对象和影响范围，再选择分区级维护；维护后核对查询结果和元数据，物理空间回收需要另外观察。
 
 ### 学习目标
 
@@ -21,7 +21,7 @@
 2. 区分 Partition、Bucket、Tablet、Rowset 和 Segment；
 3. 用 `SHOW PARTITIONS`、`SHOW TABLETS` 和 `SHOW CREATE TABLE` 记录物理布局证据；
 4. 在不清空整张表的情况下执行分区级生命周期操作；
-5. 解释删除可见性、版本合并和物理空间回收不是同一时刻；
+5. 区分分区 TRUNCATE 的查询可见性、旧文件回收与 Rowset Compaction 的作用；
 6. 编写包含前置检查、执行、验证和恢复说明的维护 Runbook。
 
 ## 单元安排
@@ -31,7 +31,7 @@
 | 13.1 生命周期与保留策略 | 为什么要按时间分区？ | 8 分钟 |
 | 13.2 从表到 Tablet | 数据如何落到物理布局？ | 8 分钟 |
 | 13.3 元数据与版本证据 | 如何知道维护影响了什么？ | 8 分钟 |
-| 13.4 Compaction 与空间回收 | 删除后空间是否立即释放？ | 6 分钟 |
+| 13.4 TRUNCATE 与 Compaction | 清空分区后空间是否立即释放？ | 6 分钟 |
 | Lab 13 | 创建、检查并清理一个隔离分区 | 30 分钟 |
 | Quiz 13 | 检查生命周期概念 | 5 分钟 |
 
@@ -43,10 +43,10 @@
 | --- | --- |
 | 一行代表什么 | 某天的一笔订单事件 |
 | 保留多久 | 保留近 13 个月，历史数据归档 |
-| 删除边界 | 只删除完整的月份分区 |
+| 清理边界 | 只清空完整月份分区的数据，保留分区定义 |
 | 恢复方式 | 从归档文件或上游批次重新装载该分区 |
 
-如果保留边界是月份，却用单行 `DELETE` 清理几亿行，系统需要处理大量数据和版本；如果分区边界与业务保留周期一致，删除旧分区可以把影响范围限制在指定分区。分区不是备份，删除前仍应确认归档和恢复证据已经存在。
+如果保留边界是月份，却用逐行 `DELETE` 清理几亿行，系统需要处理大量数据和版本；如果分区边界与业务保留周期一致，就能把清理范围限制在指定分区。本实验使用 `TRUNCATE TABLE ... PARTITION` 清空旧数据，**保留分区定义**，并没有删除分区本身。分区不是备份，清空前仍应确认归档和恢复证据已经存在。
 
 ## 13.2 Partition、Bucket 和 Tablet 的关系
 
@@ -63,7 +63,7 @@ Table → Partition → Tablet → Rowset → Segment
 | Table | 业务表和 schema 边界 | 对象所有权、权限、模型 |
 | Partition | 按范围或列表切分数据 | 分区裁剪、归档、生命周期 |
 | Bucket | 将一个分区分片 | 并行度、数据倾斜、调度开销 |
-| Tablet | Bucket 的物理副本单元 | 复制、版本、Compaction、大小 |
+| Tablet | 与分桶对应的数据分片；副本是它在 BE 上的拷贝 | 复制、版本、Compaction、大小 |
 | Rowset | 一次写入形成的不可变文件组 | 版本数量、合并压力 |
 | Segment | Rowset 内部的数据组织 | 扫描和索引实现细节 |
 
@@ -95,18 +95,18 @@ SHOW TABLETS FROM ops_orders_l3;
 
 官方语法见 [SHOW PARTITIONS](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/table-and-view/table/SHOW-PARTITIONS)、[SHOW TABLET](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/table-and-view/data-and-status-management/SHOW-TABLET/) 和 [Partitioning and Bucketing](https://doris.apache.org/docs/4.x/key-features/partitioning-and-bucketing/)。
 
-## 13.4 删除、版本和 Compaction
+## 13.4 分区 TRUNCATE、空间回收与 Compaction
 
-Doris 的写入通常产生新的不可变 Rowset，后台 Compaction 再将多个 Rowset 合并。删除操作可能先让查询结果在逻辑上不可见，物理文件则要等待版本合并和安全清理。因而维护验收至少分成：
+Doris 的写入通常产生新的不可变 Rowset，后台 Compaction 再将多个 Rowset 合并。但本实验的 `TRUNCATE TABLE ... PARTITION` 是按整分区清空，不是逐行 `DELETE`，也不以 Compaction 完成作为查询不可见的条件。旧文件何时释放不能仅从查询结果判断。因而维护验收至少分成：
 
 1. **逻辑验收**：查询结果不再包含目标分区的数据；
 2. **元数据验收**：分区状态和行数反映维护后的结果；
-3. **物理验收**：在适合的环境中观察 Tablet、Rowset 或 Compaction 状态；
+3. **物理观察**：在适合的环境中观察存储占用及回收过程；Compaction 状态用于分析写入产生的 Rowset，不能用来判定本次 TRUNCATE 是否完成；
 4. **恢复验收**：确认仍有归档、批次或重载路径。
 
-不要把“`TRUNCATE PARTITION` 执行成功”解释成“磁盘空间已经立即归还”。也不要在课程小样本中用一次执行时间推断生产 Compaction 性能。
+不要把“`TRUNCATE TABLE ... PARTITION` 执行成功”解释成“磁盘空间已经立即归还”。也不要在课程小样本中用一次执行时间推断生产 Compaction 性能。[TRUNCATE 操作](https://doris.apache.org/docs/4.x/data-operate/delete/truncate-manual/)说明了它与逐行 DELETE 的区别。
 
-Compaction 由 BE 后台处理。生产中需要根据版本数、Compaction score、写入频率和查询压力决定是否观察或人工触发；人工 Compaction 需要额外权限，并且提交任务成功不等于任务已经完成。参考 [Data Compaction](https://doris.apache.org/docs/4.x/key-features/data-compaction/) 和 [COMPACT TABLE](https://doris.apache.org/docs/dev/sql-manual/sql-statements/table-and-view/data-and-status-management/COMPACT-TABLE/)。
+Compaction 由 BE 后台处理，主要用于合并写入积累的 Rowset；生产中应结合版本数、Compaction score、写入频率和查询压力观察它。Lab 13 不手动触发 Compaction。参考 [Data Compaction](https://doris.apache.org/docs/4.x/key-features/data-compaction/)。
 
 ## 动手实验：隔离表上的分区生命周期
 
@@ -155,7 +155,7 @@ Lab 13 不依赖 Level 1 的业务表，只需要课程沙箱连接。它只创�
 
 - Partition 是生命周期和裁剪边界，Bucket/Tablet 是分布和物理执行边界；
 - `SHOW PARTITIONS`、`SHOW TABLETS`、`SHOW CREATE TABLE` 提供不同层次的证据；
-- 逻辑删除、版本合并、Compaction 和物理空间回收不是同一时刻；
+- 分区 TRUNCATE 后的查询可见性与旧文件回收不是同一时刻；Compaction 另用于整理写入积累的 Rowset；
 - 任何维护操作都应有范围检查、执行记录、结果验证和恢复路径；
 - 单节点小样本适合学习语义，不适合推导生产容量和性能参数。
 
@@ -169,4 +169,4 @@ Lab 13 不依赖 Level 1 的业务表，只需要课程沙箱连接。它只创�
 - [SHOW PARTITIONS](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/table-and-view/table/SHOW-PARTITIONS)
 - [SHOW TABLET](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/table-and-view/data-and-status-management/SHOW-TABLET/)
 - [Data Compaction](https://doris.apache.org/docs/4.x/key-features/data-compaction/)
-- [COMPACT TABLE](https://doris.apache.org/docs/dev/sql-manual/sql-statements/table-and-view/data-and-status-management/COMPACT-TABLE/)
+- [TRUNCATE 操作](https://doris.apache.org/docs/4.x/data-operate/delete/truncate-manual/)
