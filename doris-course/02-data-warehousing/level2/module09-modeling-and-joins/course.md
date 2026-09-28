@@ -52,8 +52,6 @@ Source → ODS (raw) → DWD (validated detail) → DWS (aggregates) → ADS (de
 
 ODS/DWD/DWS/ADS are **modeling conventions**, not four Doris storage engines. Prefixing four tables does not create a trustworthy pipeline. Describe how data is transformed, when each result is refreshed, how rejected records are preserved, and how a failed batch is rerun. A layer may be a table or a view; it need not copy every column.
 
-A star schema keeps facts and shared dimensions separate, improving dimension reuse but requiring carefully checked joins. A wide table can simplify frequent queries at the cost of redundant attributes and more expensive updates. Choose from the actual query and update patterns, not from a universal rule.
-
 ## 9.2 Join at the Right Grain
 
 A **fact** records a business process or measure, such as an order amount, item quantity, or payment event. A **dimension** explains it, such as customer name, region, or product category. Grain comes before column selection:

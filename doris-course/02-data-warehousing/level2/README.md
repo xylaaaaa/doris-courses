@@ -26,7 +26,7 @@ Complete each module in the order **Course → Lab → Quiz**. The course explai
 
 ## What you will be able to do
 
-- **Design:** Declare fact and dimension grains; choose Duplicate, Unique, or Aggregate Key models; compare star schemas with wide tables.
+- **Design:** Declare fact and dimension grains; choose Duplicate, Unique, or Aggregate Key models.
 - **Implement:** Create regular and materialized views, check transparent rewriting, join without duplicating measures, and reconcile an aggregate service table with independent detail queries.
 - **Publish:** Define a metric contract (numerator, denominator, grain, filters, freshness), expose a semantic view to BI, prepare a reviewed feature projection for AI, and check freshness, nulls, row counts, and amounts.
 
@@ -81,7 +81,6 @@ An Aggregate Key `SUM` column accumulates repeated inserts. In this isolated Lab
 ## Completion checklist
 
 - [ ] State the grain of a fact and a dimension table, and choose an appropriate key model.
-- [ ] Explain the trade-off between a star schema and a wide table.
 - [ ] Create a regular view and a materialized view; verify any transparent rewrite with `EXPLAIN`.
 - [ ] Join facts and dimensions without silently losing or duplicating orders.
 - [ ] Build an aggregate service table and reconcile it with an independent detail query.
