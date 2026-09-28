@@ -112,6 +112,16 @@ class Level2MaterialsTest(unittest.TestCase):
             self.assertIn("expect(", source, path)
             self.assertIn("TODO:", source, path)
 
+    def test_level2_exercise_precedes_answer_and_reference(self):
+        for path in sorted(LEVEL2.glob("module*/lab*.ipynb")):
+            notebook = nbformat.read(path, as_version=4)
+            sources = [cell.source for cell in notebook.cells]
+            prompt = next(i for i, source in enumerate(sources) if source.startswith("## 独立练习"))
+            answer = next(i for i, source in enumerate(sources) if "# TODO:" in source)
+            reference = next(i for i, source in enumerate(sources) if source.startswith("<details>\n<summary>参考解释"))
+            self.assertLess(prompt, answer, path)
+            self.assertLess(answer, reference, path)
+
 
 if __name__ == "__main__":
     unittest.main()
