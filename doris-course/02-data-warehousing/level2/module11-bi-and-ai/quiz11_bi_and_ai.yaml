@@ -1,76 +1,73 @@
-title: '模块 11：BI 与 AI 应用'
-description: 共 5 道单选题，不需要连接数据库。
+title: 'Module 11: BI and AI Applications'
+description: Five multiple-choice questions. No database connection required.
 questions:
 - id: q1
-  objective: 设计名称稳定的消费者语义视图
-  prompt: 语义视图对 BI 的作用是什么？
+  objective: Design a consumer-facing semantic view with stable names.
+  prompt: What does a semantic view provide to BI consumers?
   options:
   - id: a
-    text: A. 为维度和度量提供稳定且经过评审的契约
+    text: A. A stable, reviewed contract for dimensions and measures.
   - id: b
-    text: B. 替代所有源数据
+    text: B. A replacement for all source data.
   - id: c
-    text: C. 不经过测试就保证看板正确
+    text: C. Correct dashboards without testing.
   - id: d
-    text: D. 每个消费者的物理副本
+    text: D. A physical copy for every consumer.
   answer: a
-  explanation: 它提供经过评审的名称和含义，使看板不必重复
-    独立编写业务逻辑。
+  explanation: It gives consumers reviewed names and meanings so dashboards need not reimplement business logic independently.
 - id: q2
-  objective: 区分看板维度和指标度量
-  prompt: 在日订单看板中，哪一项是度量？
+  objective: Distinguish dashboard dimensions from metric measures.
+  prompt: In a daily order dashboard, which field is a measure?
   options:
   - id: a
     text: A. order_date
   - id: b
-    text: B. 区域标签
+    text: B. region label
   - id: c
     text: C. gross_amount
   - id: d
-    text: D. 看板标题
+    text: D. dashboard title
   answer: c
-  explanation: 订单数和总金额是度量；日期是维度。
+  explanation: Order count and gross amount are measures; the date is a dimension.
 - id: q3
-  objective: 准备特征投影，但不夸大模型质量结论
-  prompt: 特征投影提供什么？
+  objective: Prepare a feature projection without overstating model quality.
+  prompt: What does a feature projection provide?
   options:
   - id: a
-    text: A. 有保证的预测
+    text: A. Guaranteed predictions.
   - id: b
-    text: B. 为下游模型或服务提供经过评审的输入列
+    text: B. Reviewed input columns for a downstream model or service.
   - id: c
-    text: C. 自动访问私有数据
+    text: C. Automatic access to private data.
   - id: d
-    text: D. 替代监控
+    text: D. A replacement for monitoring.
   answer: b
-  explanation: 它准备带类型和名称的输入，但不能证明下游模型
-    是准确的。
+  explanation: It prepares named, typed inputs but does not prove that a downstream model is accurate.
 - id: q4
-  objective: 在服务消费者前验证空值、新鲜度和行数
-  prompt: 发布消费者视图前应做哪些检查？
+  objective: Validate nulls, freshness, and row counts before serving consumers.
+  prompt: Which checks should precede publishing a consumer view?
   options:
   - id: a
-    text: A. 只有图表颜色
+    text: A. Only chart colors.
   - id: b
-    text: B. 只有 SQL 文本长度
+    text: B. Only SQL text length.
   - id: c
-    text: C. 只有模型框架版本
+    text: C. Only the model framework version.
   - id: d
-    text: D. 空值、新鲜度/日期覆盖范围、行数和总数
+    text: D. Nulls, freshness or date coverage, row counts, and totals.
   answer: d
-  explanation: 发布前检查空值、日期覆盖范围、行数和指标总数。
+  explanation: Check nulls, date coverage, row counts, and metric totals before publication.
 - id: q5
-  objective: 记录 Doris SQL 与下游 BI 或 AI 工具之间的边界
-  prompt: 集成边界应记录什么？
+  objective: Document the boundary between Doris SQL and downstream BI or AI tools.
+  prompt: What should an integration boundary document?
   options:
   - id: a
-    text: A. 数据契约、新鲜度、访问权限和下游责任
+    text: A. Data contract, freshness, access rights, and downstream responsibilities.
   - id: b
-    text: B. 只有 JDBC 驱动名称
+    text: B. Only the JDBC driver name.
   - id: c
-    text: C. 只有可视化主题
+    text: C. Only the visualization theme.
   - id: d
-    text: D. 下游准确性是自动保证的
+    text: D. That downstream accuracy is automatically guaranteed.
   answer: a
-  explanation: 记录 Doris 保证的内容，以及 BI 或 AI 消费者必须
-    负责的内容。
+  explanation: State what Doris guarantees and what BI or AI consumers remain responsible for.

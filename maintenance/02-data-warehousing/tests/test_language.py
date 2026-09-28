@@ -38,12 +38,12 @@ def heading_ids(text):
 
 class EnglishMaterialTest(unittest.TestCase):
     def test_authored_text_is_english(self):
-        for path, text in authored_files(("level1",)):
+        for path, text in authored_files(("level1", "level2")):
             with self.subTest(path=str(path.relative_to(ROOT))):
                 self.assertNotRegex(text, r"[\u3400-\u4dbf\u4e00-\u9fff]")
 
-    def test_level2_and_level3_materials_include_chinese_learner_text(self):
-        for path, text in authored_files(("level2", "level3")):
+    def test_level3_materials_include_chinese_learner_text(self):
+        for path, text in authored_files(("level3",)):
             with self.subTest(path=str(path.relative_to(ROOT))):
                 self.assertRegex(text, r"[\u3400-\u4dbf\u4e00-\u9fff]")
 
@@ -61,6 +61,17 @@ class EnglishMaterialTest(unittest.TestCase):
                 with self.subTest(source=str(path), target=target):
                     self.assertTrue(dest.is_file())
                     self.assertIn(unquote(url.fragment), set(heading_ids(dest.read_text())))
+
+    def test_level2_local_links_resolve(self):
+        for path, text in authored_files(("level2",)):
+            if path.suffix not in {".md", ".ipynb"}:
+                continue
+            for target in re.findall(r"\]\(([^\s)]+)\)", text):
+                url = urlsplit(target)
+                if url.scheme or url.netloc or not url.path:
+                    continue
+                with self.subTest(source=str(path), target=target):
+                    self.assertTrue((path.parent / unquote(url.path)).exists())
 
 
 if __name__ == "__main__":

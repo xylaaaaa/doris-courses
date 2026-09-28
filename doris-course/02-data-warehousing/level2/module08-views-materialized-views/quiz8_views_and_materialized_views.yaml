@@ -1,79 +1,73 @@
-title: '模块 8：视图与物化视图'
-description: 共 5 道单选题，不需要连接数据库。
+title: 'Module 8: Views and Materialized Views'
+description: Five multiple-choice questions. No database connection required.
 questions:
 - id: q1
-  objective: 区分逻辑视图和已存储的物化结果
-  prompt: 哪项说法最能区分视图和物化视图？
+  objective: Distinguish a logical view from a stored materialized result.
+  prompt: Which statement best distinguishes a view from a materialized view?
   options:
   - id: a
-    text: A. 两者都会始终保存每一条源数据的副本
+    text: A. Both always store a copy of every source row.
   - id: b
-    text: B. 视图保存定义；物化视图维护查询结果
+    text: B. A view stores a query definition; a materialized view maintains a query result.
   - id: c
-    text: C. 物化视图只是改名后的表
+    text: C. A materialized view is merely a table with a different name.
   - id: d
-    text: D. 视图不能包含 JOIN
+    text: D. A view cannot contain a JOIN.
   answer: b
-  explanation: 视图保存查询定义；物化视图还会维护
-    可用于重复计算的已存储结果。
+  explanation: A view stores a query definition. A materialized view also maintains a stored result that can avoid repeated computation.
 - id: q2
-  objective: 根据新鲜度和成本要求选择刷新策略
-  prompt: 看板可以接受延迟 5 分钟的数据以降低刷新成本，哪种设计
-    是合适的？
+  objective: Choose a refresh strategy based on freshness and cost requirements.
+  prompt: A dashboard can tolerate data that is five minutes old in exchange for lower refresh cost. Which design is appropriate?
   options:
   - id: a
-    text: A. 不考虑成本、每次查询都刷新
+    text: A. Refresh on every query without considering cost.
   - id: b
-    text: B. 禁用所有刷新却声称数据实时
+    text: B. Disable refresh but claim the data is real-time.
   - id: c
-    text: C. 使用明确的定时或手动刷新策略
+    text: C. Define an explicit scheduled or manual refresh strategy.
   - id: d
-    text: D. 用客户端 CSV 替换视图
+    text: D. Replace the view with a client-side CSV.
   answer: c
-  explanation: 定时或手动刷新策略可以用新鲜度换取可预测的
-    工作量；策略选择必须明确。
+  explanation: An explicit scheduled or manual refresh policy trades freshness for predictable work. The chosen policy must be documented.
 - id: q3
-  objective: 通过元数据和结果检查验证物化视图
-  prompt: 创建物化视图后应检查什么？
+  objective: Validate a materialized view using metadata and results.
+  prompt: What should you check after creating a materialized view?
   options:
   - id: a
-    text: A. 刷新状态、行值和聚合总数
+    text: A. Refresh status, row values, and aggregate totals.
   - id: b
-    text: B. 只有 CREATE 语句文本
+    text: B. Only the CREATE statement text.
   - id: c
-    text: C. 只有客户端响应时间
+    text: C. Only client response time.
   - id: d
-    text: D. 只有对象名是否存在
+    text: D. Only whether the object name exists.
   answer: a
-  explanation: 检查元数据，并将物化结果与规范
-    查询结果进行对比。
+  explanation: Check refresh metadata and compare materialized results against the canonical query results.
 - id: q4
-  objective: 使用 EXPLAIN 证明查询改写，不凭对象命中猜测
-  prompt: 证明查询使用物化视图的正确证据是什么？
+  objective: Use EXPLAIN rather than guessing to verify query rewrite.
+  prompt: What is appropriate evidence that a query uses a materialized view?
   options:
   - id: a
-    text: A. 查询至少返回了一行
+    text: A. The query returns at least one row.
   - id: b
-    text: B. 源表仍然存在
+    text: B. The source table still exists.
   - id: c
-    text: C. 视图有描述性名称
+    text: C. The view has a descriptive name.
   - id: d
-    text: D. 执行计划显示物化视图或其扫描，且结果一致
+    text: D. The plan shows the materialized view or its scan, and results agree.
   answer: d
-  explanation: EXPLAIN 计划证据与结果对比结合起来，比仅凭
-    对象名推断发生改写更可靠。
+  explanation: Plan evidence from EXPLAIN plus a result comparison is more reliable than inferring rewrite from an object name.
 - id: q5
-  objective: 在改变实现方式时保持已发布视图契约稳定
-  prompt: 为什么将视图作为服务契约？
+  objective: Keep a published view contract stable while changing its implementation.
+  prompt: Why publish a view as a serving contract?
   options:
   - id: a
-    text: A. 它迫使每个消费者了解物理 Tablet
+    text: A. It forces every consumer to understand physical tablets.
   - id: b
-    text: B. 它将消费者契约与实现细节分开
+    text: B. It separates the consumer contract from implementation details.
   - id: c
-    text: C. 它阻止所有 Schema 演进
+    text: C. It prevents all schema evolution.
   - id: d
-    text: D. 它保证每个查询都会改写
+    text: D. It guarantees every query will be rewritten.
   answer: b
-  explanation: 消费者依赖稳定的列和语义，维护者可以
-    改变底层实现。
+  explanation: Consumers rely on stable columns and semantics while maintainers can change the underlying implementation.
