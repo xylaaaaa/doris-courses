@@ -206,13 +206,9 @@ FROM bi_order_metrics_l2;
 | 新鲜度 | 最大事件时间和刷新时间达到承诺 | 调度、队列、BI 缓存 |
 | 权限 | 只读用户只能看到发布范围 | 数据库授权和 BI 连接账号 |
 
-### 当前实验边界
-
-打开 [Lab 11](lab11_bi_and_ai_delivery.ipynb)，它会重建 `_l2` 语义视图，查询一组经过评审的字段，并执行完整性检查。它不启动 Superset，也不连接外部 MCP Server；正文中的连接配置和安全规则是部署前阅读材料，不应写成“Notebook 已完成看板和自然语言查询交付”。
-
 ## 动手实验：发布稳定的消费者接口
 
-请先完成 Lab 10，再打开 Lab 11。实验使用同一个专用 `dw_course_l1_*` 数据库，重建 `bi_order_metrics_l2`，并将查询结果以表格输出。Lab 11 的输入来自 Module 10 服务表；Lab 8–9 的对象不是本实验的直接输入，所以实验顺序和数据依赖应以 Notebook 的前置检查为准。
+请先完成 Lab 10，再打开 [Lab 11](lab11_bi_and_ai_delivery.ipynb)。实验使用同一个专用 `dw_course_l1_*` 数据库，重建 `bi_order_metrics_l2`，并以表格输出结果和完整性检查。输入来自 Module 10 服务表；Lab 8–9 的对象不是直接输入。Notebook 不启动 Superset，也不连接外部 MCP Server；正文中的连接配置供部署时参考。
 
 ### 独立练习
 

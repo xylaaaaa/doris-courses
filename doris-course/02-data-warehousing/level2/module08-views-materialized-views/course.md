@@ -93,7 +93,7 @@ WHERE order_amount > 0;
 | 同步物化视图 | 基表关联的物化索引 | 建成后随基表写入维护 | 支持范围内的单表查询加速 |
 | 异步物化视图 | 可查询的物化结果 | 独立刷新任务 | 聚合、多表关联、可接受刷新延迟的服务 |
 
-同步物化视图在写入链路维护一致性，但创建过程本身也需要构建完成。它不支持任意 SQL：例如单表限制、聚合表达式和基表模型限制需要一起满足。本课 `orders_imported` 是 Unique Key 表，不能直接照搬 Duplicate Key 表的同步聚合示例。详细约束见 [同步物化视图](https://doris.apache.org/docs/4.x/query-acceleration/materialized-view/sync-materialized-view/)。
+同步物化视图在写入链路维护一致性，但创建过程本身也需要构建完成。它不支持任意 SQL：例如单表限制、聚合表达式和基表模型限制需要一起满足。本课 `orders_imported` 是 **Duplicate Key** 表；官方文档指出，若基表是 Unique Key，同步物化视图只能调整列顺序，不能做聚合。不能把不同基表模型的示例直接互换。详细约束见 [同步物化视图](https://doris.apache.org/docs/4.x/query-acceleration/materialized-view/sync-materialized-view/)。
 
 异步物化视图将维护工作拆成独立任务。消费者可以直接查询其名称，也可以继续查询基表，由优化器在满足条件时透明改写。创建成功、刷新成功、直接查询成功和透明改写成功，是四个不同的检查点。
 
