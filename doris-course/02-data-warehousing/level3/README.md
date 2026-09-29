@@ -53,7 +53,7 @@ Level 3 教你把“开个账号”“清一下旧数据”和“给看板留出
 
 ## 实验说明
 
-三个实验都连接课程专用的 `dw_course_l1_*` 数据库（连接时自动创建），只创建带 `_l3` 后缀的对象。Lab 12 开始时会删除上次遗留的 `course_bi_reader_l3` 角色，结束时撤销授权并删除该角色；Lab 13 开始时会删除并重建 `ops_orders_l3`；Lab 14 开始时会删除上次遗留的 SQL Block Rule、角色和两个 Workload Group，并重建 `orders_monthly_l3`，结束时回收授权并删除角色和组。三个实验都可以重复执行。
+三个实验都连接课程专用的 `dw_course_l1_*` 数据库（连接时自动创建），使用带 `_l3` 标识的课程对象。Lab 12 创建实验视图和角色，短暂使用随机命名的普通测试用户验证读取边界，结束时删除用户并清理授权、角色和视图；Lab 13 重建 `ops_orders_l3` 和 `ops_orders_drop_l3`，对比 `TRUNCATE`、`DROP` 和 `RECOVER`；Lab 14 清理上次遗留的 SQL Block Rule、角色和两个 Workload Group，并重建 `orders_monthly_l3`，结束时回收授权并删除角色和组。三个实验都可以重复执行。
 
 角色、Workload Group 和 SQL Block Rule 都是集群级对象，不属于课程库。Lab 14 的全局 SQL Block Rule 生效期间会影响沙箱里的所有会话，所以它只存在于一个单元格内，无论成功与否都会在这个单元格结束前删除。
 
@@ -62,7 +62,7 @@ Level 3 教你把“开个账号”“清一下旧数据”和“给看板留出
 | Lab | 需要的前置 Lab | 为什么需要 |
 | --- | --- | --- |
 | Lab 12 | Level 1 Lab 5 | 需要 `orders_imported` 的 10 条订单（总额 1400.00）作为授权对象 |
-| Lab 13 | 无 | 只使用实验自己创建的 `ops_orders_l3` |
+| Lab 13 | 无 | 只使用实验自己创建的两张 `_l3` 表 |
 | Lab 14 | 无 | 只使用实验自己创建的 `orders_monthly_l3`、两个 Workload Group 和课程角色 |
 
 Lab 12 的独立练习会用到 Level 2 Lab 11 的 `bi_order_metrics_l2`，但只要求写出方案，不在 Notebook 中执行。
@@ -71,10 +71,10 @@ Lab 12 的独立练习会用到 Level 2 Lab 11 的 `bi_order_metrics_l2`，但�
 
 ### 实验范围说明
 
-Notebook 使用 root 连接单节点 Doris 4.1.3 沙箱，验证的是授权、撤销、分区清理，以及资源组排队、两种时限和扫描拦截的核心路径。以下内容只在正文中说明边界，沙箱没有验证：
+Notebook 主要使用 root 管理单节点 Doris 4.1.3 沙箱对象；Lab 12 另用临时普通用户验证视图访问和拒绝，Lab 13 验证分区清理与回收站期限内的恢复，Lab 14 验证资源组排队、两种时限和扫描拦截的核心路径。以下内容只在正文中说明边界，沙箱没有验证：
 
-- 创建真实消费者用户，并以该身份登录验证访问结果，包括使用未授权的 Workload Group 时被拒绝；
-- 生产环境的主机范围、密钥管理和审批流程；
+- 生产环境的消费者账号生命周期、主机范围、密钥管理和审批流程；
+- Lab 14 以普通用户尝试使用未经授权的 Workload Group 时的拒绝结果；
 - 多 BE 下的 Tablet 分布和副本修复；
 - 物理空间回收的实际时间，以及从归档恢复数据；
 - CPU 上限（沙箱没有配置 CPU cgroup）、组内存超限后的暂停和取消，以及 Workload Policy 自动取消查询；

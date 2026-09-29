@@ -5,7 +5,7 @@
 | 所属课程 | Data Warehousing with Apache Doris · Level 3 |
 | 产品范围 | Apache Doris 4.x；示例使用课程单节点沙箱 |
 | 前置知识 | Level 1 的订单表；Level 2 的消费者视图仅用于独立练习 |
-| 建议用时 | 约 65 分钟：阅读 30 分钟、实验 30 分钟、测验 5 分钟 |
+| 建议用时 | 约 75 分钟：阅读 30 分钟、实验 40 分钟、测验 5 分钟 |
 
 [Level 3 目录](../README.md) · [打开 Lab 12](lab12_publishing_permissions_audit.ipynb) · [打开 Quiz 12](quiz12_publishing_permissions_audit.ipynb)
 
@@ -42,7 +42,7 @@ Level 2 最后发布了语义视图 `bi_order_metrics_l2`。现在 BI 负责人�
 | 12.3 如何证明授权刚好够用？ | 发布证据各自证明什么 | 6 分钟 |
 | 12.4 看板下线后如何收回权限？ | 撤销顺序和影响范围 | 5 分钟 |
 | 12.5 表级权限不够细怎么办？ | 列权限、Row Policy 和脱敏 | 4 分钟 |
-| Lab 12 | 创建、复核并清理 BI 读者角色 | 30 分钟 |
+| Lab 12 | 创建角色、验证普通用户访问并清理 | 40 分钟 |
 | Quiz 12 | 检查发布治理概念 | 5 分钟 |
 
 ## 12.1 BI 要的到底是什么？
@@ -70,7 +70,7 @@ Level 2 最后发布了语义视图 `bi_order_metrics_l2`。现在 BI 负责人�
 
 契约要先于授权：授权语句里的对象和范围，直接来自契约里的“对象”和“消费者和访问范围”两行。
 
-Lab 12 为了减少前置依赖，用 Level 1 的 `orders_imported` 演示授权流程。它是订单明细，不是交付给 BI 的服务视图；本单元的独立练习会把同一套流程用到 `bi_order_metrics_l2` 上。
+Lab 12 为了减少前置依赖，先用 Level 1 的 `orders_imported` 演示表级授权，再创建自己的 `course_bi_orders_view_l3`，把角色收窄为只读视图，并用普通用户验证底表不可读。它不要求先完成 Level 2；独立练习再把同一套流程用到 `bi_order_metrics_l2` 上。
 
 ## 12.2 应该给多大的权限？
 
@@ -78,7 +78,7 @@ Lab 12 为了减少前置依赖，用 Level 1 的 `orders_imported` 演示授权
 
 BI 团队有 5 个人要看这个看板。如果逐个给用户授权，就要执行 5 遍同样的授权；有人转岗时容易忘记收回；新人入职时也说不清该照着谁的权限开。
 
-Doris 内置授权分三层：**权限 → 角色 → 用户**。权限说明可以对哪个对象做什么；角色把一组权限命名并复用；用户通过持有角色获得权限。人员进出只需要调整用户持有的角色，所以角色是集中授权、撤销和审计的边界。Lab 12 只创建角色 `course_bi_reader_l3`，不创建真实用户，也不把角色授给任何人。
+Doris 内置授权分三层：**权限 → 角色 → 用户**。权限说明可以对哪个对象做什么；角色把一组权限命名并复用；用户通过持有角色获得权限。人员进出只需要调整用户持有的角色，所以角色是集中授权、撤销和审计的边界。Lab 12 先创建 `course_bi_reader_l3` 角色，随后短暂授给随机命名的测试用户，验证完就撤销并删除测试用户。
 
 ### 看板需要哪种权限？
 
@@ -124,13 +124,14 @@ Lab 12 会先执行 `CREATE ROLE IF NOT EXISTS course_bi_reader_l3`，并用当�
 | 检查点 | Lab 12 中的 SQL | 回答什么问题 |
 | --- | --- | --- |
 | 身份 | `SELECT CURRENT_USER(), DATABASE()` | 谁在执行，连接在哪个数据库 |
-| 对象 | `SELECT COUNT(*), SUM(order_amount) FROM orders_imported` | 授权对象存在，而且是预期的 10 行、合计 1400.00 |
+| 对象 | `SELECT COUNT(*), SUM(order_amount) FROM orders_imported` | 实验底表存在，而且是预期的 10 行、合计 1400.00 |
 | 执行者权限 | `SHOW GRANTS` | 当前连接用户拥有哪些权限；**不**显示目标角色变更前的授权 |
 | 角色基线 | 重置后 `SHOW ROLES` | 目标课程角色此时不存在；不代表历史上从未授权 |
-| 授权后 | `SHOW ROLES` | 新角色拿到了什么权限，范围是否正确 |
+| 授权后 | 两次 `SHOW ROLES` | 先观察表级授权，再确认最终只保留视图权限 |
+| 普通用户 | 临时用户的视图、底表和撤销后查询 | 实际读取与拒绝结果是否符合最小权限设计 |
 | 业务值复核 | 再次查询行数和总额 | 授权没有改动数据产品本身 |
 
-读 `SHOW ROLES` 的结果时，找到 `course_bi_reader_l3` 这一行：`TablePrivs` 列应显示 `internal.<当前库>.orders_imported: Select_priv`。如果这条授权出现在 `GlobalPrivs`、`CatalogPrivs` 或 `DatabasePrivs` 列，说明范围被放大了。`Users` 列为空，因为 Lab 12 没有把角色授给任何用户。
+读第一次授权后的 `SHOW ROLES` 时，找到 `course_bi_reader_l3`：`TablePrivs` 应显示 `internal.<当前库>.orders_imported: Select_priv`。改授视图后，同一列应只显示 `course_bi_orders_view_l3: Select_priv`，不再包含底表。如果授权出现在 `GlobalPrivs`、`CatalogPrivs` 或 `DatabasePrivs` 列，范围就被放大了。第一次查看时 `Users` 为空；测试用户只在后面的验收步骤中短暂持有角色。
 
 每类证据只能回答一部分问题：
 
@@ -142,17 +143,17 @@ Lab 12 会先执行 `CREATE ROLE IF NOT EXISTS course_bi_reader_l3`，并用当�
 | FE 审计日志与审批记录 | 分别追查实际执行的 SQL 和审批依据 | 单独证明授权后的权限范围或消费者访问结果 |
 | 以测试消费者身份查询 | 这个身份实际能读什么、不能读什么 | 其他身份或其他主机的访问结果 |
 
-最后一类证据最接近真实访问，但课程沙箱没有演示。它在隔离环境中的表现是：只被授予视图 `SELECT_PRIV` 的用户可以查询视图；直接查询底层明细表时，Doris 返回 `Access denied; you need (at least one of) the (Admin_priv,Select_priv) privilege(s) on table ...`。这也印证了 12.2 的结论：`ADMIN_PRIV` 和 `SELECT_PRIV` 都能通过读取检查，`GRANT_PRIV` 不能。
+最后一类证据最接近真实访问。Lab 12 会用临时普通用户亲自验证：只授予视图 `SELECT_PRIV` 时可以查询视图；直接查询底层明细表会被拒绝。撤销该用户的角色后，再查询视图也会被拒绝。这样既区分了 root 的管理能力与普通用户的读取能力，也避免把 `SHOW ROLES` 当成实际访问结果。
 
-如果在独立的测试环境验收消费者权限，应创建专用测试用户、只给它目标角色，再**以该用户身份**连接（不要用 root 代测）：
+在个人课程沙箱验收消费者权限时，Lab 12 创建临时测试用户、只给它目标角色，再**以该用户身份**连接（不用 root 代测）：
 
 | 测试 | 预期 | 说明 |
 | --- | --- | --- |
-| 查询被发布的 `bi_order_metrics_l2` 视图 | 成功 | 视图权限实际可用 |
+| 查询实验发布的 `course_bi_orders_view_l3` 视图 | 成功 | 视图权限实际可用 |
 | 直接查询 `orders_imported` 明细表 | 被拒绝 | 没有顺带开放底表 |
 | 撤销角色后重试视图查询 | 被拒绝 | 撤销确实影响消费者，而非只改变管理员看到的列表 |
 
-Lab 12 不创建测试用户，因此不能把它的 `SHOW ROLES` 输出当成这三项测试的结果。
+Lab 12 的三项断言在隔离沙箱里真正执行；生产环境仍需要审批、独立身份管理和审计日志，不应复用实验账号配置。
 
 一份完整的发布记录应包含身份、对象、权限、原因和发布标识，并把权限证据、业务值证据与审批记录关联到同一个变更编号上。生产环境应按运维制度查看 FE 的 `fe.audit.log` 并留存审批单；Lab 的常量 `SELECT` 即使作为查询本身被审计，也只说明执行了这条 `SELECT`，不会把展示的“变更理由”变成真实审批记录，更不能证明 `GRANT` 已执行。[FE 日志管理](https://doris.apache.org/docs/4.x/admin-manual/log-management/fe-log/)说明了真实审计日志的位置和用途。
 
@@ -165,7 +166,7 @@ Lab 12 不创建测试用户，因此不能把它的 `SHOW ROLES` 输出当成�
 <!-- reading-only-example -->
 ```sql
 REVOKE SELECT_PRIV
-ON internal.dw_course_l1_demo.orders_imported
+ON internal.dw_course_l1_demo.course_bi_orders_view_l3
 FROM ROLE 'course_bi_reader_l3';
 
 DROP ROLE IF EXISTS course_bi_reader_l3;
@@ -178,11 +179,11 @@ DROP ROLE IF EXISTS course_bi_reader_l3;
 3. 删除角色：确认角色不再需要后，执行 `DROP ROLE`；
 4. 复核结果：再执行一次 `SHOW ROLES`，确认角色和授权都已经不在。
 
-在 Lab 12 中，授权后的 `SHOW ROLES` 已经显示 `Users` 列为空，所以撤权后可以直接删除角色，最后再用 `SHOW ROLES` 复核。
+在 Lab 12 中，测试用户持有角色期间先验证访问，再把角色从用户撤下并删除测试用户；最后撤销角色的视图权限、删除角色和实验视图，并用 `SHOW ROLES` 复核。
 
 撤销只改变访问，不改变数据产品：
 
-- 持有该角色的用户之后查询 `orders_imported` 会被拒绝；如果这是该用户在这个库中唯一的权限，连以这个库为默认库建立连接都会失败，返回 1044 错误；
+- 测试用户失去角色后查询 `course_bi_orders_view_l3` 会被拒绝；它此前也没有底表 `orders_imported` 的读取权限；
 - `orders_imported` 仍然是 10 行、合计 1400.00，粒度和字段都不变；
 - 通过其他角色获得权限的用户不受影响。
 
@@ -206,13 +207,13 @@ DROP ROLE IF EXISTS course_bi_reader_l3;
 
 1. 检查当前用户、数据库、执行者权限和重置后的角色基线；
 2. 创建课程专用的 `course_bi_reader_l3` 角色；
-3. 只授予当前课程库中 `orders_imported` 的 `SELECT_PRIV`；
-4. 输出角色权限与变更说明示例，确认对象范围；
-5. 撤销授权并删除角色，确认实验没有留下多余权限。
+3. 先观察表级授权，再改授当前课程库的实验视图，确认角色不再能直接读底表；
+4. 用临时普通用户验证“视图可读、明细不可读、撤销后视图不可读”；
+5. 输出角色权限与变更说明示例，并清理测试用户、角色和实验视图。
 
 ### 前置条件和安全说明
 
-Lab 12 只需要 Level 1 Lab 5 加载的 `orders_imported`；Level 2 的服务视图只在独立练习中使用。Notebook 会在变更前检查这张表是否存在。实验只使用专用的 `dw_course_l1_*` 数据库，不创建真实用户，不打印密码，也不向共享生产对象授权。它验证的是角色配置和数据值；角色没有授给真实用户，所以也没有验证消费者登录后的访问结果。
+Lab 12 只需要 Level 1 Lab 5 加载的 `orders_imported`；Level 2 的服务视图只在独立练习中使用。Notebook 会在变更前检查这张表是否存在。实验只使用专用的 `dw_course_l1_*` 数据库；临时用户随机命名、密码只留在内存中且不输出，验证后立即删除。`'%'` 主机范围只为个人课程容器连通性服务，不是生产授权方案，也不向共享生产对象授权。
 
 ### 完成标准
 
@@ -220,8 +221,9 @@ Lab 12 只需要 Level 1 Lab 5 加载的 `orders_imported`；Level 2 的服务�
 | --- | --- |
 | 前置数据 | `orders_imported` 为 10 行、合计 1400.00 |
 | 发布前身份 | 显示当前课程用户和专用数据库 |
-| 授权范围 | `TablePrivs` 中只有当前库的 `orders_imported`，不是全局或整库 |
+| 授权范围 | 第一阶段 `TablePrivs` 只有当前库的 `orders_imported`；第二阶段只有 `course_bi_orders_view_l3`，不是全局或整库 |
 | 授权类型 | `Select_priv`，没有 `Admin_priv` 或 `Grant_priv` |
+| 普通用户验收 | 视图查询成功、底表查询被拒绝、撤销角色后视图查询被拒绝 |
 | 变更说明示例 | 变更编号、角色、对象、权限和教学理由齐全，但不当作审批或系统审计日志 |
 | 清理后 | `SHOW ROLES` 中不再出现 `course_bi_reader_l3` |
 

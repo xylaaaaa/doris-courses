@@ -5,7 +5,7 @@
 | 所属课程 | Data Warehousing with Apache Doris · Level 3 |
 | 产品范围 | Apache Doris 4.x；示例使用课程单节点沙箱 |
 | 前置知识 | Level 1 的表模型和导入；Module 12 的变更证据与撤销思路 |
-| 建议用时 | 约 65 分钟：阅读 30 分钟、实验 30 分钟、测验 5 分钟 |
+| 建议用时 | 约 75 分钟：阅读 30 分钟、实验 40 分钟、测验 5 分钟 |
 
 [Level 3 目录](../README.md) · [打开 Lab 13](lab13_storage_and_lifecycle.ipynb) · [打开 Quiz 13](quiz13_storage_lifecycle.ipynb)
 
@@ -17,7 +17,7 @@
 - 之后的每次查询都要过滤这个删除条件，直到后台 Compaction 真正清除这些行；
 - 有人问“如果条件写错了，怎么恢复”，没人答得上来。
 
-问题不在 `DELETE` 这条语句本身，而在执行前少想了四件事：按什么边界清理、数据在物理上存放在哪里、执行前后留什么证据、出错后怎么恢复。本单元在一张隔离表上把这四件事走一遍，最后写成一份维护 Runbook。
+问题不在 `DELETE` 这条语句本身，而在执行前少想了四件事：按什么边界清理、数据在物理上存放在哪里、执行前后留什么证据、出错后怎么恢复。本单元在两张隔离表上对比 `TRUNCATE` 和 `DROP/RECOVER`，最后写成一份维护 Runbook。
 
 ### 学习目标
 
@@ -39,7 +39,7 @@
 | 13.3 维护前后留什么证据？ | 三类 SHOW 语句各自证明什么 | 6 分钟 |
 | 13.4 TRUNCATE 之后数据和空间怎样变化？ | 可见性、元数据和物理空间 | 6 分钟 |
 | 13.5 如何把维护写成 Runbook？ | 范围、检查、变更、证据和恢复 | 4 分钟 |
-| Lab 13 | 创建、检查并清理一个隔离分区 | 30 分钟 |
+| Lab 13 | 对比隔离表上的 TRUNCATE 与 DROP/RECOVER | 40 分钟 |
 | Quiz 13 | 检查生命周期概念 | 5 分钟 |
 
 ## 13.1 为什么要按分区清理？
@@ -72,7 +72,7 @@
 | `TRUNCATE TABLE ... PARTITION (p202501)` | 保留，之后还能向这个月份重新装载数据 | 清空后重建该月数据；Lab 13 用它演示分区级操作 |
 | `ALTER TABLE ... DROP PARTITION p202501` | 一并删除 | 归档已验证、该月不再保留时，滚动清理过期分区 |
 
-因此，Lab 13 **不是**完整的 13 个月滚动保留作业：它只练习“不清空整张表”的操作边界。生产 Runbook 还必须写明截止月份、归档验收、迟到数据如何处理，以及清理后分区应消失还是保留为空。
+因此，Lab 13 **不是**完整的 13 个月滚动保留作业：它在两张隔离表上对比 `TRUNCATE` 与 `DROP/RECOVER`，但不执行归档、自动清理或物理空间回收。生产 Runbook 还必须写明截止月份、归档验收、迟到数据如何处理，以及清理后分区应消失还是保留为空。
 
 生产环境中，这类滚动清理也可以交给动态分区自动完成：设置 `dynamic_partition.start` 后，Doris 会定期删除超出范围的历史分区；不设置时，默认不删除任何历史分区。详见 [Dynamic Partitioning](https://doris.apache.org/docs/4.x/table-design/data-partitioning/dynamic-partitioning)。
 
@@ -206,12 +206,13 @@ Compaction 是 BE 的后台任务，把同一个 Tablet 上积累的多个 Rowse
 2. 写入 1 到 3 月各一行样本，核对业务行；
 3. 用 `SHOW PARTITIONS`、`SHOW TABLETS` 和 `SHOW CREATE TABLE` 记录维护前的证据；
 4. 只清理 `p202501`，确认 2 月和 3 月的数据仍在；
-5. 再次查看分区元数据，对比维护前后的变化；
-6. 完成独立练习：为“当月及之前 12 个自然月”的保留策略写一份 Runbook，并解释它与本 Lab 的 `TRUNCATE` 有何不同。
+5. 用断言对比维护前后的 `PartitionId`、版本和每个分区的行数；
+6. 在第二张隔离表上 `DROP PARTITION` 并在回收站期限内 `RECOVER`，对比分区消失与恢复；
+7. 完成独立练习：为“当月及之前 12 个自然月”的保留策略写一份 Runbook。
 
 ### 前置条件和安全说明
 
-Lab 13 不依赖 Level 1 的业务表，只需要课程沙箱连接。它开始时会删除并重建 `ops_orders_l3`，只对这张表执行 `TRUNCATE`，不会触碰 `orders_imported` 或其他共享对象。示例中的分区名只适用于这张实验表，不要复制到生产表上执行。
+Lab 13 不依赖 Level 1 的业务表，只需要课程沙箱连接。它会删除并重建 `ops_orders_l3` 和 `ops_orders_drop_l3`：前者只执行分区 `TRUNCATE`，后者演示不加 `FORCE` 的 `DROP/RECOVER`。两张表都带 `_l3` 后缀，不触碰 `orders_imported` 或其他共享对象。示例分区名只适用于实验表，不要复制到生产表上执行。
 
 ### 完成标准
 
@@ -222,9 +223,10 @@ Lab 13 不依赖 Level 1 的业务表，只需要课程沙箱连接。它开始�
 | Tablet 证据 | `SHOW TABLETS` 返回 3 行，每个分区一个 Tablet 副本 |
 | 清理范围 | 只清空 `p202501`，剩余 2 行，合计 500.00 |
 | 元数据变化 | `p202501` 的 `PartitionId` 已变化，其他两个分区不变 |
+| `DROP/RECOVER` 对照 | 第二张表的一月分区先消失，再在回收站期限内连同原有一行恢复 |
 | 解释边界 | 能区分查询可见性、元数据变化和物理空间回收 |
 
-Notebook 在清理后只重新读取分区元数据。如需对比 `TabletId`，可以自己再执行一次 `SHOW TABLETS FROM ops_orders_l3`。
+Notebook 会自动对比各分区的 `PartitionId` 与行数；如需进一步对比 `TabletId`，可以自己在清理后再执行一次 `SHOW TABLETS FROM ops_orders_l3`。单节点小样本不验证生产环境的空间释放时间。
 
 ## 独立练习
 

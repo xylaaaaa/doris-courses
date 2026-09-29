@@ -45,7 +45,7 @@ questions:
   explanation: "A: 正确。契约里的对象就是这一个视图，授权范围收窄到这一个对象；只拿到视图权限的角色就可以查询视图。B: *.*.* 覆盖所有 Catalog 中的所有库表，以后新建的表也自动可读，远远超出契约范围。C: 整库授权会让同库的 orders_imported 明细可读，这个库以后新建的表也会自动可读。D: 查询视图不需要底层表的权限；把明细表也授给角色，它就能绕开视图直接读取订单明细。"
 - id: q4
   objective: 用 SHOW GRANTS、SHOW ROLES 和变更说明保留发布证据，并区分它们与真实审计日志
-  prompt: "Lab 12 授权后，SHOW ROLES 中 course_bi_reader_l3 一行的 TablePrivs 为 internal.<当前库>.orders_imported: Select_priv，Users 列为空。这份证据能证明什么？"
+  prompt: "Lab 12 第一阶段刚授予表级权限后，SHOW ROLES 中 course_bi_reader_l3 一行的 TablePrivs 为 internal.<当前库>.orders_imported: Select_priv，Users 列为空。这份证据能证明什么？"
   options:
   - id: a
     text: A. BI 同事已经可以登录并查询 orders_imported
