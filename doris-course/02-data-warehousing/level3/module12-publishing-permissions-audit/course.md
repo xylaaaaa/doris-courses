@@ -29,7 +29,7 @@ Level 2 最后发布了语义视图 `bi_order_metrics_l2`。现在 BI 负责人�
 1. 为数据产品写出对象、粒度、字段语义、新鲜度、访问范围和责任人的消费者契约；
 2. 区分用户、角色、权限和对象范围，并区分数据访问权限与 `GRANT_PRIV`、`ADMIN_PRIV` 等管理权限；
 3. 通过专用角色只授予消费者需要的对象权限，而不是共享 root 或授予全局权限；
-4. 用 `SHOW GRANTS`、`SHOW ROLES` 和审计记录保留发布证据，并说明每类证据证明不了什么；
+4. 用 `SHOW GRANTS`、`SHOW ROLES` 和变更说明保留发布证据，并区分它们与真实审计日志；
 5. 按“确认影响、撤销授权、删除角色、复核结果”的顺序撤销访问，并说明撤销只改变访问、不改变数据产品；
 6. 判断什么时候表级权限不够，需要列权限、Row Policy 或脱敏。
 
@@ -87,9 +87,10 @@ Doris 内置授权分三层：**权限 → 角色 → 用户**。权限说明可
 | `SELECT_PRIV` | 读取指定范围内的数据 | 需要 |
 | `LOAD_PRIV`、`ALTER_PRIV`、`DROP_PRIV` | 写入或删除数据、修改表结构、删除对象 | 不需要，看板只读 |
 | `GRANT_PRIV` | 把权限授给别人，管理用户和角色 | 不需要，否则 BI 可以自行扩大授权、绕开审批 |
-| `ADMIN_PRIV`、`NODE_PRIV` | 集群管理和节点变更 | 不需要 |
+| `ADMIN_PRIV` | 除节点操作外的管理员能力，包括读取和授权 | 不需要 |
+| `NODE_PRIV` | FE、BE 等节点的增删和管理 | 不需要 |
 
-这些权限不能互相替代：`GRANT_PRIV` 本身不包含读取能力，`SELECT_PRIV` 也不能把权限转授给别人。`ADMIN_PRIV` 本身就能通过读取检查，正因为它什么都能做，才更不能为了查一张表而授予。执行授权的人需要 `GRANT_PRIV` 或 `ADMIN_PRIV`，这也是课程用 root 执行授权的原因。
+这些权限不能互相替代：`GRANT_PRIV` 本身不包含读取能力，`SELECT_PRIV` 也不能把权限转授给别人。`ADMIN_PRIV` 包含读取能力，但不包含 `NODE_PRIV`，不能为了查一张表就授予它。执行授权需要相应的 `GRANT_PRIV` 或管理员权限；在 Doris 4.x 中，委派授权者还必须拥有准备授出的对象权限，不能只凭 `GRANT_PRIV` 给任意表授予 `SELECT_PRIV`。课程使用 root，是为了在个人沙箱里演示授权过程，而不是生产环境的授权方案。
 
 ### 同样是 SELECT_PRIV，范围差多少？
 
@@ -118,13 +119,14 @@ Lab 12 会先执行 `CREATE ROLE IF NOT EXISTS course_bi_reader_l3`，并用当�
 
 ## 12.3 如何证明授权刚好够用？
 
-看板上线三个月后，审计来问：这个角色是谁开的？开了什么？为什么开？开之前它有什么权限？只回答“SQL 执行成功了”，一个问题都答不上。所以 Lab 12 在每个检查点都留下证据：
+看板上线三个月后，审计来问：谁执行了变更？授予了什么？为什么授予？目标角色在变更前后有什么不同？只回答“SQL 执行成功了”，这些问题仍答不全。Lab 12 开始时会删除上次实验遗留的专用角色，所以它能展示的是**重置后的空白基线**，不是旧角色被删除前的历史状态；真实变更必须先保留原状态再操作。
 
 | 检查点 | Lab 12 中的 SQL | 回答什么问题 |
 | --- | --- | --- |
 | 身份 | `SELECT CURRENT_USER(), DATABASE()` | 谁在执行，连接在哪个数据库 |
 | 对象 | `SELECT COUNT(*), SUM(order_amount) FROM orders_imported` | 授权对象存在，而且是预期的 10 行、合计 1400.00 |
-| 授权前 | `SHOW GRANTS` | 执行者当前有哪些权限，是否具备授权能力 |
+| 执行者权限 | `SHOW GRANTS` | 当前连接用户拥有哪些权限；**不**显示目标角色变更前的授权 |
+| 角色基线 | 重置后 `SHOW ROLES` | 目标课程角色此时不存在；不代表历史上从未授权 |
 | 授权后 | `SHOW ROLES` | 新角色拿到了什么权限，范围是否正确 |
 | 业务值复核 | 再次查询行数和总额 | 授权没有改动数据产品本身 |
 
@@ -136,12 +138,23 @@ Lab 12 会先执行 `CREATE ROLE IF NOT EXISTS course_bi_reader_l3`，并用当�
 | --- | --- | --- |
 | `SHOW ROLES` | 角色拥有什么权限、范围多大 | 真实消费者能否登录并读到数据 |
 | 业务查询 | 对象存在，值符合预期 | 权限没有超出范围 |
-| 手写的审计 `SELECT` | 记录了角色、对象、权限和理由 | 这些操作真的执行过；它只是一份声明，要和 `SHOW ROLES` 对照 |
+| Lab 中的变更说明 `SELECT` | 展示变更编号、角色、对象、权限和教学理由如何记录 | 经过审批或真的执行过；它只是示例声明，**不是 Doris 审计日志** |
+| FE 审计日志与审批记录 | 分别追查实际执行的 SQL 和审批依据 | 单独证明授权后的权限范围或消费者访问结果 |
 | 以测试消费者身份查询 | 这个身份实际能读什么、不能读什么 | 其他身份或其他主机的访问结果 |
 
 最后一类证据最接近真实访问，但课程沙箱没有演示。它在隔离环境中的表现是：只被授予视图 `SELECT_PRIV` 的用户可以查询视图；直接查询底层明细表时，Doris 返回 `Access denied; you need (at least one of) the (Admin_priv,Select_priv) privilege(s) on table ...`。这也印证了 12.2 的结论：`ADMIN_PRIV` 和 `SELECT_PRIV` 都能通过读取检查，`GRANT_PRIV` 不能。
 
-一份完整的发布记录应包含身份、对象、权限、原因和发布标识，并把权限证据和业务值证据关联到同一个变更编号上。
+如果在独立的测试环境验收消费者权限，应创建专用测试用户、只给它目标角色，再**以该用户身份**连接（不要用 root 代测）：
+
+| 测试 | 预期 | 说明 |
+| --- | --- | --- |
+| 查询被发布的 `bi_order_metrics_l2` 视图 | 成功 | 视图权限实际可用 |
+| 直接查询 `orders_imported` 明细表 | 被拒绝 | 没有顺带开放底表 |
+| 撤销角色后重试视图查询 | 被拒绝 | 撤销确实影响消费者，而非只改变管理员看到的列表 |
+
+Lab 12 不创建测试用户，因此不能把它的 `SHOW ROLES` 输出当成这三项测试的结果。
+
+一份完整的发布记录应包含身份、对象、权限、原因和发布标识，并把权限证据、业务值证据与审批记录关联到同一个变更编号上。生产环境应按运维制度查看 FE 的 `fe.audit.log` 并留存审批单；Lab 的常量 `SELECT` 即使作为查询本身被审计，也只说明执行了这条 `SELECT`，不会把展示的“变更理由”变成真实审批记录，更不能证明 `GRANT` 已执行。[FE 日志管理](https://doris.apache.org/docs/4.x/admin-manual/log-management/fe-log/)说明了真实审计日志的位置和用途。
 
 ## 12.4 看板下线后如何收回权限？
 
@@ -183,7 +196,7 @@ DROP ROLE IF EXISTS course_bi_reader_l3;
 | --- | --- | --- |
 | 部分列只给特定角色 | 列权限，如 `SELECT_PRIV(order_id, order_amount)` | 表新增列时要重新评审授权范围 |
 | 按条件只看部分行 | Row Policy，可以绑定到用户或角色 | 过滤条件要用真实消费者身份验证 |
-| 敏感字段只显示部分内容 | 数据脱敏 | 需要结合相应的数据访问控制方案或 Ranger |
+| 敏感字段只显示部分内容 | 数据脱敏 | Doris 当前通过 Apache Ranger 配置脱敏策略；本 Lab 未安装 Ranger |
 
 不管选哪种机制，都要用真实的普通消费者身份验证效果；root 或管理员执行成功，不能说明普通用户已经被隔离。先写清楚要防什么、涉及哪些对象、怎样验收，再选择具体实现。各机制的边界见 [Data Access Control](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/data/)。
 
@@ -191,10 +204,10 @@ DROP ROLE IF EXISTS course_bi_reader_l3;
 
 打开 [Lab 12](lab12_publishing_permissions_audit.ipynb)，按顺序完成：
 
-1. 检查当前用户、数据库和已有授权；
+1. 检查当前用户、数据库、执行者权限和重置后的角色基线；
 2. 创建课程专用的 `course_bi_reader_l3` 角色；
 3. 只授予当前课程库中 `orders_imported` 的 `SELECT_PRIV`；
-4. 输出角色和审计记录，确认对象范围；
+4. 输出角色权限与变更说明示例，确认对象范围；
 5. 撤销授权并删除角色，确认实验没有留下多余权限。
 
 ### 前置条件和安全说明
@@ -209,7 +222,7 @@ Lab 12 只需要 Level 1 Lab 5 加载的 `orders_imported`；Level 2 的服务�
 | 发布前身份 | 显示当前课程用户和专用数据库 |
 | 授权范围 | `TablePrivs` 中只有当前库的 `orders_imported`，不是全局或整库 |
 | 授权类型 | `Select_priv`，没有 `Admin_priv` 或 `Grant_priv` |
-| 审计记录 | 角色、对象、权限和理由四项都有记录 |
+| 变更说明示例 | 变更编号、角色、对象、权限和教学理由齐全，但不当作审批或系统审计日志 |
 | 清理后 | `SHOW ROLES` 中不再出现 `course_bi_reader_l3` |
 
 ## 独立练习
@@ -235,7 +248,7 @@ TO ROLE 'course_bi_reader_l3';
 
 不需要给它依赖的 `daily_order_metrics_l2` 或 `orders_imported` 授权。只拿到视图权限的角色可以查询视图；如果把明细表也授给它，它就能绕开视图直接读取订单明细。
 
-权限证据至少留两份：授权前的 `SHOW GRANTS`，记录执行者和变更前的状态；授权后的 `SHOW ROLES`，确认 `TablePrivs` 中只有这个视图。在隔离环境中实际发布时，还应以测试消费者身份验证“视图可读、明细不可读”。
+权限证据至少留两份：`SHOW GRANTS` 确认执行者的权限，变更前后的 `SHOW ROLES` 对照目标角色的状态；授权后应确认 `TablePrivs` 中只有这个视图。`SHOW GRANTS` 不显示目标角色的历史权限。在隔离环境中实际发布时，还应以测试消费者身份验证“视图可读、明细不可读”。
 
 发布失败时，先确认没有其他消费者持有这个角色，再 `REVOKE` 刚才的授权；角色不再需要时执行 `DROP ROLE`，最后用 `SHOW ROLES` 复核。
 
@@ -248,13 +261,13 @@ TO ROLE 'course_bi_reader_l3';
 - 授权之前先写消费者契约：对象、粒度、字段语义、新鲜度、访问范围和责任人；
 - 权限授给专用角色而不是直接授给用户，数据访问权限 `SELECT_PRIV` 要和 `GRANT_PRIV`、`ADMIN_PRIV` 等管理权限分开；
 - 授权范围收窄到契约里的对象，不共享 root，也不授予 `*.*.*` 或 `internal.*.*`；
-- `SHOW GRANTS`、`SHOW ROLES`、业务查询和审计记录各自回答不同的问题，root 在沙箱中执行成功不等于消费者权限设计正确；
+- `SHOW GRANTS`、`SHOW ROLES`、业务查询、变更说明和真实审计日志各自回答不同的问题；root 在沙箱中执行成功不等于消费者权限设计正确；
 - 撤销按“确认影响、撤销授权、删除角色、复核结果”的顺序进行，只改变访问，不改变数据产品；
 - 表级权限不够细时，考虑列权限、Row Policy 或脱敏，并用真实的普通消费者身份验证。
 
 ## 知识测验
 
-[Quiz 12](quiz12_publishing_permissions_audit.ipynb) 包含 5 道离线题目，检查消费者契约、最小权限、数据权限与管理权限的区别、发布审计证据和撤销边界。
+[Quiz 12](quiz12_publishing_permissions_audit.ipynb) 包含 5 道离线题目，检查消费者契约、最小权限、数据权限与管理权限的区别、发布证据和撤销边界。
 
 ## 官方参考资料
 
@@ -263,4 +276,5 @@ TO ROLE 'course_bi_reader_l3';
 - [REVOKE FROM](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/REVOKE-FROM)
 - [SHOW GRANTS](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/SHOW-GRANTS)
 - [SHOW ROLES](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/SHOW-ROLES/)
+- [FE 日志管理](https://doris.apache.org/docs/4.x/admin-manual/log-management/fe-log/)
 - [Data Access Control](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/data/)

@@ -44,7 +44,7 @@ questions:
   answer: a
   explanation: "A: 正确。契约里的对象就是这一个视图，授权范围收窄到这一个对象；只拿到视图权限的角色就可以查询视图。B: *.*.* 覆盖所有 Catalog 中的所有库表，以后新建的表也自动可读，远远超出契约范围。C: 整库授权会让同库的 orders_imported 明细可读，这个库以后新建的表也会自动可读。D: 查询视图不需要底层表的权限；把明细表也授给角色，它就能绕开视图直接读取订单明细。"
 - id: q4
-  objective: 用 SHOW GRANTS、SHOW ROLES 和审计记录保留发布证据，并说明每类证据证明不了什么
+  objective: 用 SHOW GRANTS、SHOW ROLES 和变更说明保留发布证据，并区分它们与真实审计日志
   prompt: "Lab 12 授权后，SHOW ROLES 中 course_bi_reader_l3 一行的 TablePrivs 为 internal.<当前库>.orders_imported: Select_priv，Users 列为空。这份证据能证明什么？"
   options:
   - id: a
@@ -56,7 +56,7 @@ questions:
   - id: d
     text: D. 角色只拿到这一张表的读取权限，没有被放大到整库、Catalog 或全局
   answer: d
-  explanation: "A: Users 列为空，说明角色还没有授给任何用户；即使授给了用户，真实访问结果也要以测试消费者身份查询才能确认。B: 审批和理由要看发布记录，SHOW ROLES 只反映权限配置，不记录为什么授权。C: 行数和总额要靠业务查询核对，权限证据说明不了数据值。D: 正确。授权出现在 TablePrivs 列，而不是 GlobalPrivs、CatalogPrivs 或 DatabasePrivs 列，说明范围只到这一张表。"
+  explanation: "A: Users 列为空，说明角色还没有授给任何用户；即使授给了用户，真实访问结果也要以测试消费者身份查询才能确认。B: 审批要查真实审批记录；Lab 里的固定文本 SELECT 只是变更说明示例，不能证明审批或操作已发生。SHOW ROLES 只反映当前权限配置。C: 行数和总额要靠业务查询核对，权限证据说明不了数据值。D: 正确。授权出现在 TablePrivs 列，而不是 GlobalPrivs、CatalogPrivs 或 DatabasePrivs 列，说明范围只到这一张表。"
 - id: q5
   objective: 按“确认影响、撤销授权、删除角色、复核结果”的顺序撤销访问，并说明撤销只改变访问、不改变数据产品
   prompt: 看板下线，要收回 course_bi_reader_l3。执行前 SHOW ROLES 显示，另一个团队的用户也持有这个角色。下一步应该怎么做？

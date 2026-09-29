@@ -1,4 +1,4 @@
-# Level 3：权限、资源与运维
+# Level 3：数据产品发布与运维
 
 ## 从 Level 2 到 Level 3
 
@@ -17,7 +17,7 @@
 - 看板只需要一个指标视图，`*.*.*` 却让所有明细表都可读，以后新建的表也会自动可读；
 - 半年后看板下线，没人记得当初开了哪些权限，也就不知道该收回什么。
 
-第二类问题来自数据增长。订单表已经积累了两年数据，保留策略是 13 个月。同事执行了一条 `DELETE FROM orders WHERE order_date < '2025-02-01'`，语句很快返回，查询里也看不到这些订单了；可磁盘占用几乎没降，删错了怎么恢复也没人说得清。
+第二类问题来自数据增长。订单表已经积累了两年数据。假设维护月是 2026 年 2 月，策略要求保留**当月及之前 12 个自然月**（2025 年 2 月至 2026 年 2 月），先归档更早的完整月份。同事执行了一条 `DELETE FROM orders WHERE order_date < '2025-02-01'`，语句很快返回，查询里也看不到这些订单了；可磁盘占用几乎没降，删错了怎么恢复也没人说得清。这种按自然月计算的策略不同于“从今天起倒推 13 个月”的逐日滚动窗口。
 
 这两条 SQL 都只有一行，难的是执行前想清楚影响范围、留下什么证据、出错后怎么收回或恢复。Level 3 教你把“开个账号”和“清一下旧数据”做成可复核、可撤销、可恢复的变更。
 
@@ -31,7 +31,7 @@
 ### 完成 Level 3 后你能做什么？
 
 - 发布：写出消费者契约，用专用角色只授予消费者需要的对象权限；
-- 审计：用 `SHOW GRANTS`、`SHOW ROLES` 和审计记录留下发布证据，并说明每类证据证明不了什么；
+- 证据：区分 `SHOW GRANTS`、`SHOW ROLES`、变更说明与真实审计日志，并说明各自证明不了什么；
 - 撤销：按“确认影响、撤销授权、删除角色、复核结果”的顺序收回访问，不改动数据产品本身；
 - 运维：按保留策略划分分区，只清理目标分区，写出带证据和恢复路径的维护 Runbook。
 
@@ -43,8 +43,6 @@
 | --- | --- | --- |
 | 12 | 发布、权限与审计 | [课程](module12-publishing-permissions-audit/course.md) · [实验](module12-publishing-permissions-audit/lab12_publishing_permissions_audit.ipynb) · [测验](module12-publishing-permissions-audit/quiz12_publishing_permissions_audit.ipynb) |
 | 13 | 存储与生命周期管理 | [课程](module13-storage-lifecycle/course.md) · [实验](module13-storage-lifecycle/lab13_storage_and_lifecycle.ipynb) · [测验](module13-storage-lifecycle/quiz13_storage_lifecycle.ipynb) |
-
-目前 Level 3 包含发布治理（Module 12）和存储生命周期（Module 13）两个模块；Workload Group 等计算资源隔离暂未覆盖。
 
 ## 实验说明
 
@@ -109,7 +107,7 @@ SELECT COUNT(*) FROM ops_orders_l3 PARTITION (p202501);
 - [ ] 为数据产品写出对象、粒度、字段语义、新鲜度、访问范围和责任人
 - [ ] 通过专用角色只授予消费者需要的对象权限
 - [ ] 区分 `SELECT_PRIV` 与 `GRANT_PRIV`、`ADMIN_PRIV` 等管理权限
-- [ ] 用 `SHOW GRANTS`、`SHOW ROLES` 和审计记录留存发布证据，并说明每类证据的局限
+- [ ] 区分执行者的 `SHOW GRANTS`、角色前后的 `SHOW ROLES`、变更说明和真实审计日志
 - [ ] 按“确认影响、撤销授权、删除角色、复核结果”的顺序撤销访问
 - [ ] 判断何时需要列权限、Row Policy 或脱敏
 
@@ -119,6 +117,6 @@ SELECT COUNT(*) FROM ops_orders_l3 PARTITION (p202501);
 - [ ] 说明一行数据如何落到 Partition、Tablet、副本和 Rowset
 - [ ] 用 `SHOW PARTITIONS`、`SHOW TABLETS` 和 `SHOW CREATE TABLE` 记录维护前后的证据
 - [ ] 区分查询可见性、元数据变化和物理空间回收
-- [ ] 写出包含范围、前置检查、变更、证据和恢复路径的 Runbook
+- [ ] 为“当月及之前 12 个自然月”写出包含范围、前置检查、变更、证据和恢复路径的 Runbook
 
 接下来，可以在隔离的多节点环境中重做两个实验：用真实的测试消费者验证“视图可读、明细不可读”，并在多副本表上观察 Tablet 和副本证据。
