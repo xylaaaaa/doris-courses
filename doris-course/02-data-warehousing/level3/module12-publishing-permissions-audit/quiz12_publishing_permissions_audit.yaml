@@ -1,73 +1,73 @@
 title: '模块 12：发布、权限与审计'
-description: 共 5 道单选题，不需要连接数据库。
+description: 共 5 道单选题，不需要连接数据库。提交后查看每个选项的解析。
 questions:
 - id: q1
-  objective: 定义已发布数据产品的负责人和消费者契约
-  prompt: 已发布的数据产品首先应定义什么？
+  objective: 为数据产品写出对象、粒度、字段语义、新鲜度、访问范围和责任人的消费者契约
+  prompt: 看板要展示整体客单价，做法是把 bi_order_metrics_l2 里每天的 average_order_amount 再求平均，结果和“总金额 ÷ 总订单数”对不上。契约里最可能没写清哪一项？
   options:
   - id: a
-    text: A. 负责人、粒度、新鲜度、消费者和契约
+    text: A. 新鲜度：视图更新不及时，看板读到了旧数据
   - id: b
-    text: B. 只有图表颜色
+    text: B. 粒度：一行是一天，天级客单价不能直接再平均成整体客单价
   - id: c
-    text: C. 只有存储路径
+    text: C. 访问范围：看板还需要订单明细表，才能算出整体客单价
   - id: d
-    text: D. 只有用户密码
-  answer: a
-  explanation: 它需要负责人、粒度、新鲜度、消费者和经过评审的契约。
-- id: q2
-  objective: 使用角色和授权，仅向消费者授予所需的表权限
-  prompt: BI 读者应该如何获得访问权限？
-  options:
-  - id: a
-    text: A. 把用户设为管理员
-  - id: b
-    text: B. 共享 root 密码
-  - id: c
-    text: C. 通过专用角色授予 SELECT
-  - id: d
-    text: D. 禁用身份认证
-  answer: c
-  explanation: 通过角色只授予所需的对象权限。
-- id: q3
-  objective: 区分数据库权限和管理权限
-  prompt: 哪项说法正确？
-  options:
-  - id: a
-    text: A. 所有授权的风险都相同
-  - id: b
-    text: B. 数据访问权限和管理权限不同
-  - id: c
-    text: C. SELECT 会自动授予 DROP
-  - id: d
-    text: D. 角色不能拥有表权限
+    text: D. 字段语义：gross_amount 是模拟的税前订单金额，不是实收款
   answer: b
-  explanation: 对象级 SELECT 与管理权限不同。
-- id: q4
-  objective: 检查授权并记录发布审计轨迹
-  prompt: 哪些信息可作为发布审计证据？
+  explanation: "A: 数据延迟会让两个结果一起变旧，但在同一批数据上两种算法仍然对不上，问题出在计算方式。B: 正确。一行是一天，各天订单数不同，把天级平均值再平均会让订单少的日子权重偏大；整体客单价应按 SUM(gross_amount) / SUM(order_count) 计算。契约写清粒度，就是为了防止这种二次聚合。C: 视图已经提供 order_count 和 gross_amount，按天加总就能算出整体客单价，不需要为此开放明细表。D: 字段语义没写清会让看板把金额当成收入展示，但两种算法用的是同一个 gross_amount，解释不了两个结果为什么不同。"
+- id: q2
+  objective: 区分用户、角色、权限和对象范围，并区分数据访问权限与 GRANT_PRIV、ADMIN_PRIV 等管理权限
+  prompt: BI 负责人说：“团队现在有 5 个人，以后还会有新人。我想自己给他们开看板权限，不用每次找你审批。”下面哪种做法合适？
   options:
   - id: a
-    text: A. 只有 SQL 客户端版本
+    text: A. 给负责人授予 GRANT_PRIV，由他自行给新人开通权限
   - id: b
-    text: B. 只有行数
+    text: B. 给负责人授予 ADMIN_PRIV，以后遇到权限问题他都能自己处理
   - id: c
-    text: C. 只有看板 URL
+    text: C. 创建专用角色，只授予看板视图的 SELECT_PRIV，再把角色授给团队成员；人员变动由授权管理员调整谁持有角色
   - id: d
-    text: D. 身份、对象、权限、原因和发布证据
-  answer: d
-  explanation: 记录身份、对象、权限、原因和发布标识。
-- id: q5
-  objective: 在不改变数据产品的情况下撤销访问权限
-  prompt: 撤销角色会改变什么？
+    text: D. 不建角色，给 5 位成员逐个授予视图的 SELECT_PRIV，谁离开就收回谁的
+  answer: c
+  explanation: "A: GRANT_PRIV 是管理权限，持有者可以把权限继续授给别人，谁能看看板就不再经过审批；它本身也不包含读取能力。B: ADMIN_PRIV 是集群管理权限，本身就能通过读取检查，也能删表、改权限；为了看一个视图授予它，风险远超需要。C: 正确。数据访问权限 SELECT_PRIV 和管理权限分开授予；角色是集中授权、撤销和审计的边界，人员进出只需要调整谁持有角色。D: 逐个授权要把同样的授权执行 5 遍，有人转岗时容易漏收，新人入职时也说不清该照着谁的权限开。"
+- id: q3
+  objective: 通过专用角色只授予消费者需要的对象权限，而不是共享 root 或授予全局权限
+  prompt: 看板只读语义视图 bi_order_metrics_l2，不能读订单明细。给角色 course_bi_reader_l3 授予 SELECT_PRIV 时，ON 后面应该写什么？
   options:
   - id: a
-    text: A. 消费者授权，不改变数据产品本身
+    text: A. internal.dw_course_l1_demo.bi_order_metrics_l2，只授予这一个视图
   - id: b
-    text: B. 表中的每一行
+    text: B. *.*.*，以后新增的看板对象也不用再申请
   - id: c
-    text: C. 表粒度
+    text: C. internal.dw_course_l1_demo.*，一次覆盖这个库里的所有对象
   - id: d
-    text: D. 存储引擎
+    text: D. 视图加上它依赖的 daily_order_metrics_l2 和 orders_imported，否则视图查不出数据
   answer: a
-  explanation: 它会改变访问权限，同时保持已发布数据对象不变。
+  explanation: "A: 正确。契约里的对象就是这一个视图，授权范围收窄到这一个对象；只拿到视图权限的角色就可以查询视图。B: *.*.* 覆盖所有 Catalog 中的所有库表，以后新建的表也自动可读，远远超出契约范围。C: 整库授权会让同库的 orders_imported 明细可读，这个库以后新建的表也会自动可读。D: 查询视图不需要底层表的权限；把明细表也授给角色，它就能绕开视图直接读取订单明细。"
+- id: q4
+  objective: 用 SHOW GRANTS、SHOW ROLES 和审计记录保留发布证据，并说明每类证据证明不了什么
+  prompt: "Lab 12 授权后，SHOW ROLES 中 course_bi_reader_l3 一行的 TablePrivs 为 internal.<当前库>.orders_imported: Select_priv，Users 列为空。这份证据能证明什么？"
+  options:
+  - id: a
+    text: A. BI 同事已经可以登录并查询 orders_imported
+  - id: b
+    text: B. 这次授权经过了审批，理由也已经记录
+  - id: c
+    text: C. orders_imported 的数据仍是 10 行、合计 1400.00
+  - id: d
+    text: D. 角色只拿到这一张表的读取权限，没有被放大到整库、Catalog 或全局
+  answer: d
+  explanation: "A: Users 列为空，说明角色还没有授给任何用户；即使授给了用户，真实访问结果也要以测试消费者身份查询才能确认。B: 审批和理由要看发布记录，SHOW ROLES 只反映权限配置，不记录为什么授权。C: 行数和总额要靠业务查询核对，权限证据说明不了数据值。D: 正确。授权出现在 TablePrivs 列，而不是 GlobalPrivs、CatalogPrivs 或 DatabasePrivs 列，说明范围只到这一张表。"
+- id: q5
+  objective: 按“确认影响、撤销授权、删除角色、复核结果”的顺序撤销访问，并说明撤销只改变访问、不改变数据产品
+  prompt: 看板下线，要收回 course_bi_reader_l3。执行前 SHOW ROLES 显示，另一个团队的用户也持有这个角色。下一步应该怎么做？
+  options:
+  - id: a
+    text: A. 直接 DROP ROLE，删除角色会一并清理它的所有授权，最省事
+  - id: b
+    text: B. 先和另一个团队的负责人确认影响，谈妥后再 REVOKE 本次发布授予的权限；确认角色不再需要后再 DROP ROLE，最后用 SHOW ROLES 复核
+  - id: c
+    text: C. 删除看板读取的对象，没有对象可查，角色上的授权也就不重要了
+  - id: d
+    text: D. REVOKE 之后查询 orders_imported，行数和总额不变，就说明撤销成功
+  answer: b
+  explanation: "A: DROP ROLE 会让所有持有者一起失去通过这个角色获得的权限，另一个团队也会受影响；它还跳过了确认影响这一步，变更记录里也看不出收回了哪一项权限。B: 正确。撤销角色上的权限会影响所有持有者，所以先确认影响；REVOKE 显式收回本次发布授予的权限，变更记录里能写清楚收回了哪一项；角色仍有人使用时可以停在这一步，最后用 SHOW ROLES 复核。C: 删除对象改变的是数据产品本身，通过其他角色读取它的消费者也会受影响；撤销应当只改变访问。D: 行数和总额不变只说明数据产品没被改动，这是撤销应有的结果，但证明不了权限已经收回；要用 SHOW ROLES 确认授权已经不在。"

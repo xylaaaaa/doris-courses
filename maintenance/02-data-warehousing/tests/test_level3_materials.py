@@ -54,6 +54,29 @@ class Level3MaterialsTest(unittest.TestCase):
             self.assertEqual(len(payload["questions"]), 5, quiz)
             self.assertEqual([len(q["options"]) for q in payload["questions"]], [4] * 5)
 
+    def test_quizzes_explain_every_option_and_track_reading_goals(self):
+        for module in self.modules:
+            guide = (LEVEL3 / module / "course.md").read_text()
+            goals = guide.split("### 学习目标\n", 1)[1].split("\n## ", 1)[0]
+            objectives = {
+                re.sub(r"[；。]$", "", goal.replace("`", ""))
+                for goal in re.findall(r"^\d+\. (.+)$", goals, re.MULTILINE)
+            }
+            quiz = next((LEVEL3 / module).glob("quiz*.yaml"))
+            questions = yaml.safe_load(quiz.read_text())["questions"]
+            self.assertEqual(len({q["objective"] for q in questions}), len(questions), quiz)
+            for question in questions:
+                with self.subTest(quiz=quiz.name, question=question["id"]):
+                    self.assertIn(question["objective"], objectives)
+                    letters = [option["id"] for option in question["options"]]
+                    self.assertEqual(letters, ["a", "b", "c", "d"])
+                    self.assertEqual(len({option["text"] for option in question["options"]}), 4)
+                    self.assertIn(question["answer"], letters)
+                    for option in question["options"]:
+                        self.assertTrue(option["text"].startswith(f"{option['id'].upper()}. "))
+                        self.assertIn(f"{option['id'].upper()}: ", question["explanation"])
+                    self.assertIn(f"{question['answer'].upper()}: 正确。", question["explanation"])
+
     def test_new_notebooks_are_source_only_and_valid(self):
         notebooks = sorted(LEVEL3.glob("module*/*.ipynb"))
         self.assertEqual(len(notebooks), 4)

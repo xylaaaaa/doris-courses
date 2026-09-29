@@ -1,75 +1,73 @@
 title: '模块 13：存储与生命周期管理'
-description: 共 5 道单选题，不需要连接数据库。
+description: 共 5 道单选题，不需要连接数据库。提交后查看每个选项的解析。
 questions:
 - id: q1
-  objective: 根据数据保留语义选择分区边界
-  prompt: 什么应决定分区边界？
+  objective: 根据保留策略和查询时间语义选择分区边界
+  prompt: 订单明细表只保留最近 13 个月，按订单日期判断是否过期；报表按 order_date 过滤；每个导入批次里都混有几天前补录的订单。分区应该怎样设计？
   options:
   - id: a
-    text: A. 随机的 Bucket 数量
+    text: A. 按导入日期按月分区，每个导入批次都能完整落进同一个分区
   - id: b
-    text: B. 保留策略和查询时间语义
+    text: B. 按 order_date 按年分区，分区数量少，便于管理
   - id: c
-    text: C. 看板颜色
+    text: C. 不分区，只按 order_id 分桶，过期数据用条件 DELETE 清理
   - id: d
-    text: D. SQL 客户端数量
-  answer: b
-  explanation: 分区边界应由保留策略和查询时间语义决定。
-- id: q2
-  objective: 检查分区、Bucket、Tablet 和副本元数据
-  prompt: 哪些命令可以提供布局证据？
-  options:
-  - id: a
-    text: A. SHOW PARTITIONS、SHOW TABLETS 和 SHOW CREATE TABLE
-  - id: b
-    text: B. 只有 SELECT COUNT(*)
-  - id: c
-    text: C. 只有客户端计时器
-  - id: d
-    text: D. DROP TABLE
-  answer: a
-  explanation: 这三个命令提供互补的布局证据。
-
-- id: q3
-  objective: 在不截断整表的情况下执行分区级保留操作
-  prompt: 为什么时间分区数据适合使用分区级保留？
-  options:
-  - id: a
-    text: A. 它总会改变每个分区
-  - id: b
-    text: B. 它会禁用 Compaction
-  - id: c
-    text: C. 它将操作限制在选定分区
-  - id: d
-    text: D. 它不再需要备份
-  answer: c
-  explanation: 它将逻辑操作限制在预期的保留边界内。
-- id: q4
-  objective: 解释 Rowset、Compaction 与物理空间之间的关系
-  prompt: Compaction 做什么？
-  options:
-  - id: a
-    text: A. 它会自动改变业务粒度
-  - id: b
-    text: B. 它会授予表权限
-  - id: c
-    text: C. 它能保证查询改写
-  - id: d
-    text: D. 它会在逻辑变更后重新组织物理存储
+    text: D. 按 order_date 按月分区，与过期判断和查询过滤使用同一个时间
   answer: d
-  explanation: 后台 Compaction 会重新组织物理文件；逻辑可见性
-    与物理回收是两个不同问题。
-- id: q5
-  objective: 编写包含回滚或恢复检查的维护 Runbook
-  prompt: 维护 Runbook 应包含什么？
+  explanation: "A: 1 月的订单如果在 2 月才补录，就会落进 2 月分区：清理 1 月时会漏掉它，按 order_date 查询时也用不上分区裁剪。B: 清理一个月只能对整年分区执行条件 DELETE，删除条件记在整个年度分区上，查询其他月份时也要过滤它。C: 删除条件作用于整张表，所有查询都要过滤它，直到 Compaction 才真正清除这些行。D: 正确。按月清理时只动一个分区，其他月份不受影响；按 order_date 查询也能用上分区裁剪。"
+- id: q2
+  objective: 区分 Partition、Bucket、Tablet、副本、Rowset 和 Segment
+  prompt: 生产订单表保留 13 个按月分区，每个分区 8 个 Bucket，副本数为 3。执行 SHOW TABLETS FROM orders PARTITION (p202501)，会返回多少行？
   options:
   - id: a
-    text: A. 范围、前置检查、变更、证据和恢复路径
+    text: A. 1 行，一个分区汇总成一行
   - id: b
-    text: B. 只有 ALTER 语句
+    text: B. 8 行，每个 Bucket 对应一个 Tablet，每个 Tablet 一行
   - id: c
-    text: C. 只有截图
+    text: C. 24 行，8 个 Tablet 各有 3 个副本，每个副本一行
   - id: d
-    text: D. 只有预期行数
+    text: D. 312 行，13 个分区 × 8 个 Bucket × 3 个副本
+  answer: c
+  explanation: "A: 按分区汇总的是 SHOW PARTITIONS，每行是一个分区；SHOW TABLETS 列出的是 Tablet 的副本。B: 每个 Bucket 确实对应一个 Tablet，但 SHOW TABLETS 每行是一个副本，还要乘以副本数。C: 正确。这个分区有 8 个 Tablet，每个 Tablet 有 3 个副本，共 24 行；每行带有 TabletId、BackendId、Version 等副本信息。D: 312 行是整张表的副本数；加了 PARTITION 子句后，只列出 p202501 的副本。"
+- id: q3
+  objective: 在不清空整张表的情况下执行分区级生命周期操作
+  prompt: ops_orders_l3 有 p202501、p202502、p202503 三个按月分区。要清空 1 月的数据，2 月和 3 月不受影响，之后可能还要把 1 月的数据重新装载回来。应该执行哪条语句？
+  options:
+  - id: a
+    text: A. TRUNCATE TABLE ops_orders_l3
+  - id: b
+    text: B. TRUNCATE TABLE ops_orders_l3 PARTITION (p202501)
+  - id: c
+    text: C. ALTER TABLE ops_orders_l3 DROP PARTITION p202501
+  - id: d
+    text: D. DELETE FROM ops_orders_l3 WHERE order_date < '2025-02-01'
+  answer: b
+  explanation: "A: 不带 PARTITION 的 TRUNCATE 会清空所有分区，远远超出这次清理的范围。B: 正确。Doris 用一个同名的空分区替换 p202501，分区边界保留，之后还能向这个月份重新装载数据；p202502 和 p202503 的元数据不变。C: DROP PARTITION 会连分区定义一起删除，表里不再有容纳 1 月数据的分区，重新装载前要先把分区加回来。D: 条件 DELETE 只记下删除条件，这些行仍留在数据文件里，之后的查询都要过滤它，直到 Compaction 才真正清除。"
+- id: q4
+  objective: 区分查询可见性、元数据变化、物理空间回收和 Compaction 的作用
+  prompt: 同事在 Duplicate Key 的订单表上执行了 DELETE FROM orders WHERE order_date < '2025-02-01'。语句很快返回，查询里也看不到这些订单了，但磁盘占用几乎没降。最合理的解释是什么？
+  options:
+  - id: a
+    text: A. DELETE 写入了一个记录删除条件的新版本，查询按条件过滤这些行；它们仍在数据文件里，要等 Compaction 合并时才真正清除
+  - id: b
+    text: B. DELETE 没有真正生效，应该再执行一次，直到磁盘占用下降
+  - id: c
+    text: C. 被删除的行进入了 FE 回收站，保留期结束后才释放空间
+  - id: d
+    text: D. DataSize 汇报还没更新，过几分钟磁盘占用就会降下来
   answer: a
-  explanation: Runbook 应写明范围、前置检查、变更、证据和恢复路径。
+  explanation: "A: 正确。条件 DELETE 不改写数据文件，只记下删除条件；查询立即看不到这些行，空间要等 Compaction 合并数据时才回收。B: 查询已经看不到这些行，SHOW DELETE 也会显示 FINISHED；再执行一次只会多记一条删除条件。C: 回收站保存的是被 TRUNCATE 替换下的分区，以及被删除的库、表和分区；条件 DELETE 不经过回收站。D: DataSize 确实有汇报延迟，但这些行本来就还在数据文件里，汇报更新后占用也不会因此下降。"
+- id: q5
+  objective: 编写包含范围、前置检查、变更、证据和恢复路径的维护 Runbook
+  prompt: 下个月由值班同事清理生产订单表的 p202501。Runbook 里的“恢复路径”怎样写最可靠？
+  options:
+  - id: a
+    text: A. 误删后到 FE 回收站把旧分区换回来，回收站就是备份
+  - id: b
+    text: B. 照 Lab 13 的做法，误删后把被删的行逐行重新写入
+  - id: c
+    text: C. 执行时加 FORCE 跳过回收站，出问题再从上游全量重导整张表
+  - id: d
+    text: D. 执行前确认这个月份的归档可读、行数与分区一致；误删后从归档或上游批次重新装载该分区，再用维护前记录的行数核对
+  answer: d
+  explanation: "A: 回收站有保留期（catalog_trash_expire_second，默认 1 天），到期就清除；旧分区的名称和范围也已被新的空分区占用，不能直接原样换回。B: Lab 13 只有一行样本，可以手工补回；生产分区是一个月的订单，手工逐行重写既不现实，也没有可信的数据来源。C: FORCE 跳过回收站，去掉了最后一层缓冲；全量重导整张表远超这次维护的范围，这条路径也没有事先验证。D: 正确。恢复路径要在执行前验证，而且只针对这次变更的分区；维护前记录的行数就是恢复后的验收标准。"
