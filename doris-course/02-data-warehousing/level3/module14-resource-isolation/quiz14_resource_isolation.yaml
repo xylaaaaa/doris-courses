@@ -1,0 +1,73 @@
+title: '模块 14：资源隔离与查询保护'
+description: 共 5 道单选题，不需要连接数据库。提交后查看每个选项的解析。
+questions:
+- id: q1
+  objective: 说明一条查询按什么顺序选定 Workload Group
+  prompt: BI 账号的账号属性 default_workload_group 是看板组 course_dashboard_l3，它对看板组和临时分析组 course_adhoc_l3 都有 USAGE_PRIV。它在会话里执行了 SET workload_group = 'course_adhoc_l3'，然后提交一条看板查询。这条查询落在哪个组？
+  options:
+  - id: a
+    text: A. course_dashboard_l3，账号属性优先于会话变量
+  - id: b
+    text: B. course_adhoc_l3，会话变量不为空时优先于账号属性
+  - id: c
+    text: C. normal，两处都设置了组时 Doris 回到默认组
+  - id: d
+    text: D. 取决于哪个组当前还有空闲的执行名额
+  answer: b
+  explanation: "A: 顺序正好相反：会话变量 workload_group 不为空时，Doris 不再读取账号属性 default_workload_group。B: 正确。选组顺序是会话变量、账号属性、normal；这个会话把会话变量设成了临时分析组，账号对它也有 USAGE_PRIV，查询就在这个组执行。换一个没有设置会话变量的新会话，查询才会回到账号属性指定的看板组。C: 只有会话变量和账号属性都没有设置时才使用 normal，两处都设置了并不会回到默认组。D: 选组发生在排队之前，只看会话变量和账号属性；执行名额只决定进入这个组之后执行、排队还是被拒绝，不会把查询换到别的组。"
+- id: q2
+  objective: 根据 max_concurrency、max_queue_size 和 queue_timeout 判断查询会执行、排队还是被拒绝
+  prompt: 临时分析组只设置了 "max_concurrency" = "2"，其他属性都用默认值。三条慢查询几乎同时进入这个组，每条都要执行 1 分钟。第三条查询会怎样？
+  options:
+  - id: a
+    text: A. 进入队列，等前两条中的一条结束后执行
+  - id: b
+    text: B. 立即被拒绝，报错 query waiting queue is full
+  - id: c
+    text: C. 自动转到 normal 组执行
+  - id: d
+    text: D. 进入队列，排队 30 秒后报错 query queue timeout
+  answer: b
+  explanation: "A: 排队的前提是还有排队位置。max_queue_size 默认为 0，这个组没有队列，名额满了之后不会有查询排队。B: 正确。前两条占满 2 个执行名额；max_queue_size 默认为 0，队列容量为 0，第三条立即被拒绝，报错类似 query waiting queue is full, queue capacity=0, waiting num=0。要让它排队，需要同时设置 max_queue_size。C: 名额满了不会自动换组；选组在排队之前就已确定，排队规则只决定在这个组里执行、排队还是拒绝。D: queue_timeout 默认为 0，含义是不单独限制，最多等到 query_timeout，不是 30 秒；而且这个组没有队列，第三条根本不会排队。"
+- id: q3
+  objective: 说明内存和 CPU 上限作用在哪里，以及 CPU 上限生效的前提
+  prompt: 一套集群的 BE 没有配置 doris_cgroup_cpu_path。管理员给临时分析组设置了 "max_cpu_percent" = "10" 和 "max_memory_percent" = "30"，之后这个组的大查询运行时，BE 的 CPU 使用率仍然接近 100%。原因是什么？
+  options:
+  - id: a
+    text: A. 修改组的属性后要重启 FE，新的 CPU 上限才会生效
+  - id: b
+    text: B. max_cpu_percent 只限制排队中的查询，不限制执行中的查询
+  - id: c
+    text: C. CPU 上限依赖 BE 的 CPU cgroup，没有配置时只是一条配置；内存上限不依赖 cgroup，仍然有效
+  - id: d
+    text: D. max_cpu_percent 是整个集群的 CPU 总额度，只有一个组在用 CPU 时可以用满所有 BE
+  answer: c
+  explanation: "A: 修改组的属性不需要重启 FE，而且 CPU 上限是在 BE 上执行的，问题不在 FE。B: 排队由 max_concurrency 和 max_queue_size 决定；max_cpu_percent 限制的正是执行中的查询能用的 CPU。C: 正确。BE 通过 Linux CPU cgroup 执行 max_cpu_percent 和 min_cpu_percent；doris_cgroup_cpu_path 为空时 BE 不会为组创建 cgroup，CPU 上限不起作用。内存上限由 BE 自己统计和限制，按每个 BE 的 mem_limit 计算，不依赖 cgroup。D: 内存和 CPU 属性都作用在每个 BE 上，按 BE 分别计算，不是整个集群共用的额度；而且 max_cpu_percent 是硬上限，即使 BE 空闲也不能超过。"
+- id: q4
+  objective: 用 USAGE_PRIV 和 default_workload_group 让查询落到正确的组，并说明 bypass_workload_group 为什么不是隔离边界
+  prompt: 分析师只有临时分析组的 USAGE_PRIV。这个组的 max_concurrency 和 max_queue_size 都是 1，他的查询经常被拒绝，于是在会话里执行 SET bypass_workload_group = true 后重新提交。下面哪项描述正确？
+  options:
+  - id: a
+    text: A. 设置失败，只有管理员能修改 bypass_workload_group
+  - id: b
+    text: B. 查询跳过 FE 的排队，但仍在临时分析组执行，USAGE_PRIV 检查和 BE 上的内存上限照常生效
+  - id: c
+    text: C. 查询改到 normal 组执行，不再受临时分析组的任何限制
+  - id: d
+    text: D. 查询跳过了排队，也跳过了 USAGE_PRIV 检查，可以借此使用看板组
+  answer: b
+  explanation: "A: bypass_workload_group 是普通会话变量，设置它不需要任何权限，普通账号就能执行。B: 正确。它只跳过排队这一步：选组、USAGE_PRIV 检查和 BE 上的内存上限都照常生效，失效的只有 max_concurrency、max_queue_size 和 queue_timeout。所以排队不能当作隔离边界，真正兜底的是 BE 上的资源上限、管理员设定的执行时限和 SQL Block Rule。C: 跳过排队不会换组；查询仍按会话变量、账号属性、normal 的顺序选组，这里仍是临时分析组。D: USAGE_PRIV 检查发生在排队判断之前，跳过排队不会跳过它；切到没有权限的看板组，查询仍会被拒绝。"
+- id: q5
+  objective: 区分 query_timeout、Workload Policy 和 SQL Block Rule 的生效时机和作用范围
+  prompt: 要求分析师账号的查询一旦需要扫描超过 2 个分区，就在执行前被拒绝，而且分析师自己改不掉这个限制。应该用哪种手段？
+  options:
+  - id: a
+    text: A. 在分析师的会话里执行 SET query_timeout = 60
+  - id: b
+    text: B. 创建条件为 query_time > 60000、动作为 cancel_query 的 Workload Policy
+  - id: c
+    text: C. 创建限制 partition_num 的 SQL Block Rule，由管理员通过账号属性 sql_block_rules 绑定到分析师账号
+  - id: d
+    text: D. 把临时分析组的 max_concurrency 调成 1
+  answer: c
+  explanation: "A: query_timeout 在执行中才取消查询，不会在执行前拒绝；而且会话变量分析师自己就能改回去。B: Workload Policy 在执行过程中检查条件，查询被取消前已经执行了一段时间；这条策略按执行时间判断，不看扫描了多少分区。C: 正确。扫描规则在执行前按执行计划中的分区数检查，命中就直接拒绝，不占用 BE 资源；账号属性 sql_block_rules 只有管理员能设置，分析师自己不能解除绑定。D: 并发上限只决定同时执行多少条，不限制一条查询扫描多少分区，大扫描仍然可以执行。"

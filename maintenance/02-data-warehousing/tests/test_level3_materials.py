@@ -40,6 +40,7 @@ class Level3MaterialsTest(unittest.TestCase):
     modules = {
         "module12-publishing-permissions-audit": "publishing_permissions_audit",
         "module13-storage-lifecycle": "storage_and_lifecycle",
+        "module14-resource-isolation": "resource_isolation",
     }
 
     def test_each_module_has_guide_lab_and_quiz(self):
@@ -79,7 +80,7 @@ class Level3MaterialsTest(unittest.TestCase):
 
     def test_new_notebooks_are_source_only_and_valid(self):
         notebooks = sorted(LEVEL3.glob("module*/*.ipynb"))
-        self.assertEqual(len(notebooks), 4)
+        self.assertEqual(len(notebooks), 6)
         for path in notebooks:
             notebook = nbformat.read(path, as_version=4)
             nbformat.validate(notebook)
@@ -151,9 +152,44 @@ class Level3MaterialsTest(unittest.TestCase):
             self.assertNotIn("DROP TABLE orders_imported", source, path)
             self.assertNotIn("TRUNCATE TABLE orders_imported", source, path)
 
+    def test_resource_lab_keeps_cluster_objects_scoped(self):
+        # Workload Groups, roles and SQL block rules are cluster-wide: Lab 14 must not touch
+        # accounts or the normal group, and its global rule may only live inside one cell.
+        path = LEVEL3 / "module14-resource-isolation/lab14_resource_isolation.ipynb"
+        notebook = nbformat.read(path, as_version=4)
+        code = [cell.source for cell in notebook.cells if cell.cell_type == "code"]
+        for forbidden in ("SET PROPERTY", "CREATE USER", "WORKLOAD GROUP normal", "SET GLOBAL"):
+            self.assertNotIn(forbidden, "\n".join(code))
+
+        rule_cells = [source for source in code if "CREATE SQL_BLOCK_RULE" in source]
+        self.assertEqual(len(rule_cells), 1)
+        cleanups = [
+            "\n".join(ast.unparse(statement) for statement in node.finalbody)
+            for node in ast.walk(ast.parse(rule_cells[0]))
+            if isinstance(node, ast.Try)
+        ]
+        self.assertTrue(any("DROP SQL_BLOCK_RULE IF EXISTS course_scan_guard_l3" in c for c in cleanups))
+
+        # A leftover global rule would block the setup's full scan, and dropping the role
+        # removes stale grants before the groups are recreated.
+        setup = next(source for source in code if "DROP TABLE IF EXISTS orders_monthly_l3" in source)
+        order = [
+            "DROP SQL_BLOCK_RULE IF EXISTS course_scan_guard_l3",
+            "DROP ROLE IF EXISTS course_dashboard_reader_l3",
+            "DROP WORKLOAD GROUP IF EXISTS course_dashboard_l3",
+            "DROP TABLE IF EXISTS orders_monthly_l3",
+        ]
+        self.assertEqual([setup.index(statement) for statement in order],
+                         sorted(setup.index(statement) for statement in order))
+        self.assertLess(code.index(setup), code.index(rule_cells[0]))
+
     def test_level3_root_links_exist(self):
         readme = (LEVEL3 / "README.md").read_text()
-        for link in ("module12-publishing-permissions-audit", "module13-storage-lifecycle"):
+        for link in (
+            "module12-publishing-permissions-audit",
+            "module13-storage-lifecycle",
+            "module14-resource-isolation",
+        ):
             self.assertIn(link, readme)
 
     def test_level3_local_links_resolve(self):
