@@ -4,7 +4,7 @@
 
 ### 前两个 Level 你学会了什么？
 
-- Level 1：把 10 条订单导入 `orders_imported`，检查质量并拒收脏数据，用 `DELETE` 和重放处理状态变更，用 TVF 查询 Iceberg 外部表；
+- Level 1：通过 Iceberg Catalog 查询湖表并与内部表关联，把 10 条订单导入 `orders_imported`，检查质量并拒收脏数据，再用 `DELETE` 和重放处理状态变更；
 - Level 2：用视图和物化视图统一查询定义，安全地 JOIN 维表，按指标契约加工 `daily_order_metrics_l2`，再通过语义视图 `bi_order_metrics_l2` 交给 BI 和 AI 消费者。
 
 到这里，数据已经可以查询、可以核对，也有了面向消费者的接口。接下来的问题不再是“怎么算对”，而是“交出去以后怎么管”。
@@ -48,7 +48,7 @@
 
 ## 实验说明
 
-两个实验都使用 Level 1 准备的专用 `dw_course_l1_*` 数据库，只创建带 `_l3` 后缀的对象。Lab 12 开始时会删除上次遗留的 `course_bi_reader_l3` 角色，结束时撤销授权并删除该角色；Lab 13 开始时会删除并重建 `ops_orders_l3`。两个实验都可以重复执行。
+两个实验都连接课程专用的 `dw_course_l1_*` 数据库（连接时自动创建），只创建带 `_l3` 后缀的对象。Lab 12 开始时会删除上次遗留的 `course_bi_reader_l3` 角色，结束时撤销授权并删除该角色；Lab 13 开始时会删除并重建 `ops_orders_l3`。两个实验都可以重复执行。
 
 ### Lab 依赖关系
 

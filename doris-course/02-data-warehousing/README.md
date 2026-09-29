@@ -21,7 +21,7 @@ Lessons explain “why,” Labs show “how,” and Quizzes help you check your 
 | --- | --- | --- |
 | [Level 1: Ingestion, Cleaning, and Updates](level1/README.md) | How does data enter the warehouse, and how are errors and changes handled? | Explain order inputs, quality results, current state, and history |
 | [Level 2: Modeling, Analytics, and Service Delivery](level2/README.md) | How is data organized and delivered to the business? | Layered modeling, JOINs, metric processing, and dashboards |
-| Level 3: Permissions, Resources, and Operations (planned) | How do you manage multiple users and ongoing operation? | Access governance, resource control, and operations and maintenance |
+| [Level 3: Permissions, Resources, and Operations](level3/README.md) | How do you manage multiple users and ongoing operation? | Access governance, resource control, and operations and maintenance |
 
 The course uses historical WWI business data and separate simulated new orders; no paid data services are required.
 Module 1 starts with ten historical WWI orders included in the repository; Module 5 imports the complete 10-table Parquet package;
