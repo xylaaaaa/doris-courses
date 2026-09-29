@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Module 8 views, Module 9 grain, and Module 10 metric contracts |
-| Estimated time | About 80 minutes: reading 45, Lab 30, Quiz 5 |
+| Estimated time | About 85 minutes: reading 45, Lab 35, Quiz 5 |
 
 [Level 2 contents](../README.md) · [Open Lab 11](lab11_bi_and_ai_delivery.ipynb) · [Open Quiz 11](quiz11_bi_and_ai.ipynb)
 
@@ -32,7 +32,7 @@ After this module, you should be able to:
 | 11.3 AI feature inputs | What can a data projection prove? | 10 min |
 | 11.4 MCP access | How can an AI tool read Doris safely? | 10 min |
 | 11.5 Publication checks | How do we validate the interface? | 5 min |
-| Lab 11 / Quiz 11 | Publish a view and explain its limits | 30 / 5 min |
+| Lab 11 / Quiz 11 | Publish a view and explain its limits | 35 / 5 min |
 
 ## 11.1 Publish a Consumer Contract, Not Just a Query
 
@@ -162,7 +162,7 @@ Before production publication, also check schema and grain, critical nulls, inde
 
 ## Hands-on Lab: Publish a Stable Consumer Interface
 
-Complete Lab 10, then open [Lab 11](lab11_bi_and_ai_delivery.ipynb). It rebuilds `bi_order_metrics_l2`, queries reviewed dashboard fields and feature projections, and performs integrity checks. The input is Module 10's service table; Modules 8–9 are conceptual context but not direct Lab 11 inputs. Results appear as tables. The Lab neither launches Superset nor connects to an external MCP Server.
+Complete Lab 10, then open [Lab 11](lab11_bi_and_ai_delivery.ipynb). It rebuilds `bi_order_metrics_l2`, queries reviewed dashboard fields and feature projections, and performs integrity checks. A temporary broken view proves that a missing published column is detectable; fixed teaching reference dates show a one-day freshness rule passing and then failing. The input is Module 10's service table; Modules 8–9 are conceptual context but not direct Lab 11 inputs. Results appear as tables. The Lab neither launches Superset nor connects to an external MCP Server.
 
 ### Independent exercise
 

@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 ingestion and quality checks; Module 9 grain and joins |
-| Estimated time | About 90 minutes: reading 50, Lab 35, Quiz 5 |
+| Estimated time | About 95 minutes: reading 50, Lab 40, Quiz 5 |
 
 [Level 2 contents](../README.md) · [Open Lab 10](lab10_metric_processing.ipynb) · [Open Quiz 10](quiz10_metric_processing.ipynb)
 
@@ -32,7 +32,7 @@ After this module, you should be able to:
 | 10.3 Window and conditional logic | What happens to row grain? | 12 min |
 | 10.4 Distinct counts and evidence | Exact or approximate; plan or execution? | 10 min |
 | 10.5 Acceptance | Can detail independently reproduce the service value? | 4 min |
-| Lab 10 / Quiz 10 | Build, reconcile, and explain | 35 / 5 min |
+| Lab 10 / Quiz 10 | Build, reconcile, and explain | 40 / 5 min |
 
 ## 10.1 Write a Metric Contract Before SQL
 
@@ -195,7 +195,7 @@ A full outer join retains a date that appears on only one side. Do not replace a
 
 ## Hands-on Lab: Build and Reconcile Daily Metrics
 
-Open [Lab 10](lab10_metric_processing.ipynb) after Level 1 Lab 5. It creates `daily_order_metrics_l2`, inserts date-by-source aggregates, queries dashboard-style results, and independently reconciles detail and service values. It rebuilds only its own `_l2` table.
+Open [Lab 10](lab10_metric_processing.ipynb) after Level 1 Lab 5. It creates `daily_order_metrics_l2`, inserts date-by-source aggregates, queries dashboard-style results, and independently reconciles detail and service values. A read-only two-date, two-source CTE then makes conditional aggregation, a cumulative window, and the error of averaging source-level ratios visible without changing the service table used by Lab 11.
 
 | Acceptance check | Expected |
 | --- | --- |
@@ -203,10 +203,11 @@ Open [Lab 10](lab10_metric_processing.ipynb) after Level 1 Lab 5. It creates `da
 | Current sample | One row for `2026-01-01` and `COURSE_SIMULATION` |
 | Orders / amount | 10 / 1400.00 |
 | Independent detail comparison | Same count and amount on both sides |
+| Contrast sample | January 1 has APP count 1 versus total count 10; average-of-averages 55.00 versus correct weighted average 19.00; cumulative amount reaches 230.00 on January 2 |
 
 ### Independent exercise
 
-Could the existing service table answer “daily metrics by customer”? No: `customer_id` was discarded. Re-aggregate order detail at date-by-customer grain or build a separate service table at that grain; a more detailed result can later roll up to daily totals. Never copy a daily amount onto each customer and sum the copies.
+Run a new date-by-customer query over `orders_imported` and reconcile it independently to 10 orders and 1400.00. The existing service table cannot answer this request because `customer_id` was discarded; do not copy a daily amount onto each customer and sum the copies.
 
 ## Module Summary
 

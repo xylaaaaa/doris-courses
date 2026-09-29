@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 orders and customers; Module 8 views |
-| Estimated time | About 85 minutes: reading 45, Lab 35, Quiz 5 |
+| Estimated time | About 90 minutes: reading 45, Lab 40, Quiz 5 |
 
 [Level 2 contents](../README.md) · [Open Lab 9](lab9_modeling_and_joins.ipynb) · [Open Quiz 9](quiz9_modeling_and_joins.ipynb)
 
@@ -31,7 +31,7 @@ After this module, you should be able to:
 | 9.2 Grain and joins | Why can a join double an amount? | 15 min |
 | 9.3 Physical joins | Where do matching rows meet? | 10 min |
 | 9.4 Acceptance checks | How do we verify keys, rows, and amounts together? | 8 min |
-| Lab 9 / Quiz 9 | Build and check the order/customer example | 35 / 5 min |
+| Lab 9 / Quiz 9 | Build and check the order/customer example | 40 / 5 min |
 
 ## 9.1 Give Each Warehouse Layer a Job
 
@@ -173,7 +173,7 @@ Also check that the dimension's customer IDs are unique and the missing-dimensio
 
 ## Hands-on Lab: Order Facts and Customer Dimensions
 
-Open [Lab 9](lab9_modeling_and_joins.ipynb) after completing Level 1 Labs 5 and 6 in the same course database. The Lab creates its own `_l2` fact and dimension tables, joins them, checks missing customers, reconciles rows and amounts, and reads the plan.
+Open [Lab 9](lab9_modeling_and_joins.ipynb) after completing Level 1 Labs 5 and 6 in the same course database. The Lab creates its own `_l2` fact and dimension tables, joins them, checks missing customers, reconciles rows and amounts, and reads the plan. A read-only CTE then removes customer 2 and duplicates customer 1 to expose both join failure modes without changing the dimension table.
 
 | Input or result | Expected in this sample |
 | --- | --- |
@@ -183,10 +183,11 @@ Open [Lab 9](lab9_modeling_and_joins.ipynb) after completing Level 1 Labs 5 and 
 | Fact rows / dimension rows | 10 / 20 |
 | Joined rows / amount | 10 / 1400.00 |
 | Missing customer matches | 0 |
+| Flawed left / inner joins | 11 rows / 1500.00 and 10 rows / 1300.00; distinct-order and unmatched checks reveal why neither is correct |
 
 ### Independent exercise
 
-Remove customer 2 from the **counterexample** dimension, which still has two records for customer 1. An inner join returns two matches for order 1 and drops order 2: **2 rows, amount 200**. A left join keeps order 2 with `NULL` dimension fields: **3 rows, amount 400**. This illustrates why duplicates and missing matches can coexist. Check key uniqueness, unmatched facts, joined row counts, and measures separately.
+Repair the Lab's flawed CTE in a new query cell so every fact order has exactly one dimension match. Both inner and left joins should return 10 rows, 10 distinct orders, 1400.00 in amount, and no unmatched orders. This requires checking key uniqueness, missing matches, row counts, and measures separately; one matching total is not enough.
 
 ## Module Summary
 

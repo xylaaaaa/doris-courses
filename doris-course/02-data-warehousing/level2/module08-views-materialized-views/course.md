@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 Lab 5 and its `orders_imported` table |
-| Estimated time | About 75 minutes: reading 40, Lab 30, Quiz 5 |
+| Estimated time | About 85 minutes: reading 40, Lab 40, Quiz 5 |
 
 [Level 2 contents](../README.md) · [Open Lab 8](lab8_views_and_materialized_views.ipynb) · [Open Quiz 8](quiz8_views_and_materialized_views.ipynb)
 
@@ -31,7 +31,7 @@ After this module, you should be able to:
 | 8.2 Precomputation | When is a materialized view worth its cost? | 10 min |
 | 8.3 Incremental refresh | Does `AUTO` mean row-by-row accumulation? | 12 min |
 | 8.4 Rewrite evidence | How do we know which object a query scanned? | 10 min |
-| Lab 8 / Quiz 8 | Build, inspect, and explain the result | 30 / 5 min |
+| Lab 8 / Quiz 8 | Build, inspect, and explain the result | 40 / 5 min |
 
 ## 8.1 Use a Regular View to Share Meaning
 
@@ -171,7 +171,7 @@ Do not use `FROM orders_daily_mv_l2` as “proof” of transparent rewrite, and 
 
 ## Hands-on Lab: From Shared Definition to Verified Materialization
 
-Open [Lab 8](lab8_views_and_materialized_views.ipynb). It connects to the course database, creates `orders_service_view_l2` and `orders_daily_mv_l2`, checks `mv_infos`, compares direct MV values with a canonical aggregation, and records the `EXPLAIN` plan. The Lab rebuilds only its own `_l2` objects and does not clear the Level 1 source table.
+Open [Lab 8](lab8_views_and_materialized_views.ipynb). It connects to the course database, creates `orders_service_view_l2` and `orders_daily_mv_l2`, checks `mv_infos`, compares direct MV values with a canonical aggregation, and records the `EXPLAIN` plan. A second, isolated `_l2` source then receives a new order: its regular view changes immediately, while its manual-trigger MV changes only after an explicit refresh. The Lab never writes to the Level 1 source table.
 
 | Check | Expected observation |
 | --- | --- |
@@ -179,6 +179,7 @@ Open [Lab 8](lab8_views_and_materialized_views.ipynb). It connects to the course
 | Base-table daily aggregation | One day, 10 orders, 1400.00 |
 | Materialized result | Same values as the base-table aggregation |
 | `EXPLAIN` | Record whether the actual scan uses the MV; do not assume it does |
+| Refresh contrast | After a new 50.00 order, the regular view shows 2 / 150.00 while the stored MV still shows 1 / 100.00; after manual refresh both show 2 / 150.00 |
 
 ### Independent exercise
 
