@@ -3,21 +3,21 @@ description: "Five single-choice questions; no database connection required. Vie
 questions:
 - id: q1
   objective: "Predict the results of the same input in the Duplicate, Unique, and Aggregate models."
-  prompt: "With the same key design and no Sequence column, write (1,2300), (1,2250), and (2,405) in order, waiting for each write to succeed and become visible before the next. The Aggregate amount column declares SUM. Which result is correct?"
+  prompt: "With the same key design and no Sequence column, write (order_id, amount) rows (17,90), (17,85), and (23,12) in order, waiting for each write to succeed and become visible before the next. The Aggregate amount column declares SUM. Which result is correct?"
   options:
   - id: a
-    text: "A. All three models retain the latest amount of 2250 for order 1"
+    text: "A. All three models retain the latest amount of 85 for order 17"
   - id: b
-    text: "B. Duplicate retains three rows; order 1 is 2250 in Unique and 4550 in Aggregate"
+    text: "B. Duplicate retains three rows; order 17 is 85 in Unique and 175 in Aggregate"
   - id: c
-    text: "C. Duplicate rejects duplicate keys; order 1 is 2250 in Unique and 4550 in Aggregate"
+    text: "C. Duplicate rejects duplicate keys; order 17 is 85 in Unique and 175 in Aggregate"
   - id: d
-    text: "D. Duplicate retains three rows; order 1 has the larger amount of 2300 in Unique and 4550 in Aggregate"
+    text: "D. Duplicate retains three rows; order 17 keeps the larger amount of 90 in Unique and 175 in Aggregate"
   answer: b
-  explanation: "A: Different models have different write semantics; they cannot all be interpreted as replacing data with the latest snapshot. B: Correct. Duplicate retains detail records, Unique retains the later value under the sequential-write conditions in this question, and Aggregate accumulates values using SUM. C: Duplicate Key uses keys for sorting, not for rejecting duplicate business keys. D: Unique does not automatically select the largest amount; the amount is not declared as a version here. Nor does 4550 represent the current order amount."
+  explanation: "A: Different models have different write semantics; they cannot all be interpreted as replacing data with the latest snapshot. B: Correct. Duplicate retains detail records, Unique retains the later value under the sequential-write conditions, and Aggregate sums 90 and 85 for order 17. C: Duplicate Key uses keys for sorting, not for rejecting duplicate business keys. D: Unique does not select the largest amount; the amount is not a version, and 175 is not the current order amount."
 - id: q2
   objective: "Choose logical keys and table models for detail records, current state, or aggregate metrics."
-  prompt: "How should you choose keys when both current state and distinct business events must be retained?"
+  prompt: "A merchant needs the latest status per order for a dashboard and every distinct status-change event for audit. A network retry can resend the same event_id. Which keys preserve both grains?"
   options:
   - id: a
     text: "A. Use order_id as the unique key for both the current-state table and event history"
@@ -31,21 +31,21 @@ questions:
   explanation: "A: Multiple events for the same order overwrite each other, preventing complete history retention. B: The current-state table retains multiple event rows, while history loses earlier events for the same order. C: Correct. Current state has one row per order, and history has one row per distinct event; redeliveries of the same event still use the original ID. D: A new ID disguises a duplicate delivery as a new business event, breaking event deduplication."
 - id: q3
   objective: "Distinguish the roles of partitions, buckets, sort keys, and business unique keys."
-  prompt: "Which statement about partitions, buckets, sort keys, and business unique keys is correct?"
+  prompt: "A date-partitioned Duplicate Key table is hashed by order_id. A retry appends the same order twice, and a teammate proposes adding buckets to remove the duplicate. Which diagnosis is right?"
   options:
   - id: a
-    text: "A. Partitions manage ranges, buckets manage distribution, sort keys manage ordering, and business unique keys identify objects"
+    text: "A. Date partitions choose ranges and hash buckets distribute rows; neither removes a repeated business event, so deduplication needs its own key or rule"
   - id: b
-    text: "B. Partitioning by date automatically makes the same order ID unique across the entire table"
+    text: "B. The date partition already makes order_id globally unique, so the second row must only be a display artifact"
   - id: c
-    text: "C. Bucketing by order_id automatically removes duplicate records with the same order ID"
+    text: "C. More hash buckets will keep only one copy of each order_id when the retry is loaded"
   - id: d
-    text: "D. Declaring order_id as a Duplicate Key causes duplicate orders to be rejected on write"
+    text: "D. A Duplicate Key sort key keeps only the latest retry after Compaction finishes"
   answer: a
-  explanation: "A: Correct. The four design choices have different roles and must be combined according to the business grain, not substituted for each other. B: Date partitioning is not a global business uniqueness constraint; key design still requires separate consideration. C: Hash bucketing determines data distribution, not business deduplication semantics. D: Duplicate Key does not enforce uniqueness; replacement or aggregation depends on the table model."
+  explanation: "A: Correct. Partition and bucket choices organize data, and a Duplicate Key sort key orders it; none is a business-event deduplication rule. B: A date partition is not a global uniqueness constraint. C: Hashing the same order_id places matching rows in a shard but does not remove either row. D: Compaction preserves Duplicate Key rows; it does not turn the model into Unique Key."
 - id: q4
   objective: "Use EXPLAIN to compare scan ranges with date filters and bucket-key filters."
-  prompt: "In a date-partitioned table with HASH(order_id), what should you focus on when adding an order_id equality filter to a date filter?"
+  prompt: "A reviewer compares a date-filter query with the same query plus order_id equality on a date-partitioned, HASH(order_id) table. Both return one row. What plan evidence distinguishes the filters' scan effects?"
   options:
   - id: a
     text: "A. Look only at the final number of returned rows and treat it as the scan volume"
@@ -59,15 +59,15 @@ questions:
   explanation: "A: Returned rows are not scanned rows, nor do they indicate how many shards were read. B: Applicable filters can prune partitions and Tablets; the total bucket count does not equal the scan range for every query. C: Plan representations may change across versions; understand the selected ranges rather than comparing word for word. D: Correct. Date conditions and order_id equality conditions let you observe the two types of pruning separately."
 - id: q5
   objective: "Verify results using both detail records and amounts, without equating plan pruning with performance gains."
-  prompt: "Two full snapshots of order 701 have amounts of 800 and 760. The SUM model produces 1560, and the new plan scans fewer Tablets. How should you evaluate this?"
+  prompt: "A candidate current-order view returns four order IDs and a total amount of 200, matching an independent extract. A downstream report filters by status, but one order's status differs from the extract. EXPLAIN scans fewer Tablets than before. What should release review conclude?"
   options:
   - id: a
-    text: "A. 1560 is the current order amount because the SUM calculation reported no error"
+    text: "A. Publish: matching order count and amount prove that every status is correct"
   - id: b
-    text: "B. Fewer Tablets already prove that the new query has a shorter actual response time"
+    text: "B. Publish: fewer planned Tablets prove both business correctness and lower actual latency"
   - id: c
-    text: "C. Verify the snapshot semantics first, then test actual performance under the same workload"
+    text: "C. Reconcile the status mismatch row by row, then measure actual runtime under the same workload"
   - id: d
-    text: "D. A stable total amount is enough to go live; snapshots and query duration can be checked later"
+    text: "D. Ignore the status mismatch because a matching total is sufficient for a status-filtered report"
   answer: c
-  explanation: "A: Full snapshots should use versions to determine the current value; adding them changes the metric definition. B: Pruning is plan evidence; actual duration still requires execution testing. C: Correct. Business correctness and performance must be validated separately. D: A stable result with an incorrect metric definition is not a basis for going live."
+  explanation: "A: Equal counts and totals can hide a wrong field value. B: EXPLAIN describes planned pruning, not actual latency or business correctness. C: Correct. Status affects the report population, so reconcile the detail first and test performance separately with runtime evidence. D: A matching total today does not make an incorrect status safe for a status-filtered report."

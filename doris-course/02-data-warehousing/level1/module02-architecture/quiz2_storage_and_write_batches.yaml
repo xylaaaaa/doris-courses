@@ -3,46 +3,46 @@ description: "Five single-choice questions; no database connection required. Vie
 questions:
 - id: q1
   objective: "Trace a query to explain FE planning and BE execution responsibilities."
-  prompt: "An order-analysis SQL statement enters Doris from a client. Which path is correct?"
+  prompt: "A client receives an EXPLAIN plan, but executing the order query fails while a Backend (BE) scan fragment runs. What does this show about the Frontend (FE) and BE stages?"
   options:
   - id: a
-    text: "A. Client submits SQL → BE generates a distributed plan → FE summarizes scan results"
+    text: "A. BE generated the plan successfully; FE failed while scanning the stored order rows"
   - id: b
-    text: "B. Client generates a distributed plan → FE forwards it → BE executes fragments"
+    text: "B. EXPLAIN succeeded, so every BE scan must have completed and the failure is only in the client"
   - id: c
-    text: "C. Client submits SQL → FE plans → Wait for Compaction → BE executes"
+    text: "C. FE planned the query, but Compaction must finish before any BE scan can begin"
   - id: d
-    text: "D. Client submits SQL → FE plans and distributes → BE executes → Results are coordinated and returned"
+    text: "D. FE could plan the query, but BE execution is a later stage that may still fail"
   answer: d
-  explanation: "A: Planning is FE's responsibility; BE does not centrally generate the distributed plan. B: The client does not need to generate Doris's distributed plan. C: Compaction reorganizes storage in the background; it is not a mandatory step before each query. D: Correct. FE handles planning and coordination, while BE performs the scans and computation in the plan."
+  explanation: "A: FE plans the query, while BE scans the data; the answer swaps their roles. B: EXPLAIN shows a plan, not proof that a BE completed its scan. C: Background Compaction is not a prerequisite for running a query. D: Correct. FE planning can succeed even when a later BE fragment fails during execution."
 - id: q2
   objective: "Explain the hierarchy of Table, Partition, Tablet, Rowset, and Segment."
-  prompt: "The table in this course has only a base index, two partitions, and four buckets per partition. Excluding replicas, how should you understand its storage hierarchy?"
+  prompt: "A new table has only a base index, three partitions, and five buckets per partition. Excluding replicas, what layout should an operator expect?"
   options:
   - id: a
-    text: "A. Four Tablets in total, shared by both partitions; Tablets contain Rowsets"
+    text: "A. Five Tablets in total, shared by all three partitions; Tablets contain Rowsets"
   - id: b
-    text: "B. Eight Tablets in total; Tablets contain Rowsets, and Rowsets contain Segments"
+    text: "B. Fifteen Tablets in total; Tablets contain Rowsets, and Rowsets contain Segments"
   - id: c
-    text: "C. Two Tablets in total; each Tablet's four buckets represent four replicas"
+    text: "C. Three Tablets in total; the five buckets in each partition are five replicas"
   - id: d
-    text: "D. Eight Tablets in total; each Tablet always has exactly one Rowset and one Segment"
+    text: "D. Fifteen Tablets in total; each Tablet always has exactly one Rowset and one Segment"
   answer: b
-  explanation: "A: Each partition has its own buckets; buckets in different partitions cannot be counted as shared. B: Correct. With only a base index and excluding replicas, the Tablet count is 2×4. C: Buckets describe shards, while replicas describe copies of the same shard; these are different concepts. D: Rowset and Segment counts change with writes and compaction; they do not have a fixed one-to-one relationship."
+  explanation: "A: Each partition has its own buckets; Tablets are not shared across these partitions. B: Correct. With only a base index and excluding replicas, the Tablet count is 3×5. C: Buckets describe shards, while replicas describe copies of the same shard. D: Rowset and Segment counts change with writes and Compaction; they are not fixed at one each."
 - id: q3
   objective: "Explain the relationship between write batches, data visibility, and background Compaction."
-  prompt: "If Compaction has not finished after a write, does that necessarily mean the new data cannot be queried?"
+  prompt: "A load transaction has been published and a SELECT already returns its rows, but background Compaction is still pending. Should the dashboard wait for Compaction before reading those rows?"
   options:
   - id: a
-    text: "A. It cannot be queried; new data must be merged into old files first"
+    text: "A. Yes; published rows cannot be queried until new files are merged with old files"
   - id: b
-    text: "B. It can be queried; an HTTP 200 response to a load request means the data is visible to queries"
+    text: "B. No; the HTTP 200 response alone proves every row in the load was published"
   - id: c
-    text: "C. It can be queried; visibility depends on transaction publication and interface semantics, not on waiting for Compaction"
+    text: "C. No; the published transaction is queryable without waiting for physical Compaction"
   - id: d
-    text: "D. It can be queried; once BE generates a Segment file, the transaction is visible"
+    text: "D. Yes; the Segment must first become the only file in its Tablet"
   answer: c
-  explanation: "A: Queries can read multiple published Rowsets without waiting for background compaction. B: HTTP success only describes the request-level outcome; load status and publication results still need checking. C: Correct. Data visibility and physical compaction are different processes. D: File generation does not mean transaction publication is complete; file existence alone cannot establish visibility."
+  explanation: "A: Queries can read multiple published Rowsets before background Compaction finishes. B: A transport-level response alone does not establish row-level completeness; this scenario supplies publication and SELECT evidence. C: Correct. Visibility follows publication, not the completion of physical Compaction. D: A Tablet may contain multiple Rowsets and Segments, and their file count does not decide transaction visibility."
 - id: q4
   objective: "Keep table structure and data constant while comparing batch and row-by-row writes."
   prompt: "A team compares writes in batches of 100 rows and 10000 rows. Both runs produce identical results, but the second run also increases the bucket count. How should the results be interpreted?"
@@ -59,7 +59,7 @@ questions:
   explanation: "A: Correct. Changing multiple variables at once prevents attribution; control conditions before comparing. B: Correct data is a prerequisite but does not rule out the bucket count's effect. C: Choosing the shortest time cannot fix the experimental design. D: Bucket count changes data distribution, and Rowset count alone cannot explain the effect of batching."
 - id: q5
   objective: "Distinguish what query plans, storage metadata, and runtime evidence can each tell you."
-  prompt: "How should EXPLAIN, Tablet metadata, and Query Profile be combined?"
+  prompt: "A ten-row trial query is slower than expected. The team has its EXPLAIN plan, sampled Tablet metadata, and one Query Profile. Which interpretation uses these three kinds of evidence correctly?"
   options:
   - id: a
     text: "A. Use EXPLAIN's estimated scan scope to calculate actual disk reads directly"

@@ -3,7 +3,7 @@ description: "Five single-choice questions; no database connection required. Vie
 questions:
 - id: q1
   objective: "Distinguish between completing a transaction and analyzing a batch of orders."
-  prompt: "Which of the following is primarily analytical work?"
+  prompt: "A retailer is separating checkout requests from a report over last month's orders. Which request belongs to the analytical workload?"
   options:
   - id: a
     text: "A. Submit an order and deduct inventory in the same business operation"
@@ -17,7 +17,7 @@ questions:
   explanation: "A: Placing an order and deducting inventory completes a transaction, not cross-order analysis. B: Correct. Scanning and summarizing multiple orders by date is analytics, even if only a few rows are returned. C: Using SELECT does not necessarily mean analytics; this point lookup serves a transaction. D: An operation involving multiple fields or tables does not necessarily constitute analytical work either."
 - id: q2
   objective: "Explain Doris's role between business databases and analytics users."
-  prompt: "How do Doris and the source business system work together in this course?"
+  prompt: "An online shop must keep checkout responsive while analysts explore hourly sales trends. Which division of work fits this requirement?"
   options:
   - id: a
     text: "A. The source system handles transactions, while Doris receives business data and provides queries for analytics users"
@@ -31,7 +31,7 @@ questions:
   explanation: "A: Correct. The source system continues to process transactions, while Doris handles analytics in this course. B: Protocol compatibility does not imply identical transaction semantics, features, or suitable workloads. C: Doris itself provides analytical computation and queries; it is not merely a passive copy of the source business database. D: A connection only establishes access; continuous synchronization still requires ingestion tasks and the corresponding configuration."
 - id: q3
   objective: "Explain the responsibilities of Frontend (FE) and Backend (BE) in a storage-compute integrated environment."
-  prompt: "Which division of responsibilities is correct in this course's storage-compute integrated environment?"
+  prompt: "A SQL client sends an order aggregation to the course's storage-compute integrated Doris cluster. Before diagnosing a slow scan, which Frontend (FE) and Backend (BE) responsibilities should the team expect?"
   options:
   - id: a
     text: "A. FE stores metadata and performs detail scans, while BE only persists files"

@@ -3,21 +3,21 @@ description: Five single-choice questions; no database connection required. View
 questions:
 - id: q1
   objective: Distinguish field type validation from business quality rules.
-  prompt: Customer ID 999999 can be converted to an integer but is not in the WWI customer table. How should it be handled?
+  prompt: A new-order input has order_amount=-15.00. It parses as DECIMAL, but the agreed rule for this batch requires a nonnegative amount. How should the input be handled?
   options:
   - id: a
-    text: A. Accept the order directly because the customer ID can be converted to an integer
+    text: A. Accept it because a valid DECIMAL value satisfies the table's numeric field type
   - id: b
-    text: B. Reject it under the customer reference rule and preserve the raw input and reason
+    text: B. Reject it under the amount rule and preserve the original input and rejection reason
   - id: c
-    text: C. Automatically add customer 999999 to the customer dimension first, then accept the order
+    text: C. Replace the amount with zero during parsing and accept it without recording the change
   - id: d
-    text: D. Replace it with an existing customer ID so reference validation passes before loading it into the warehouse
+    text: D. Remove the minus sign as a formatting correction and accept 15.00 without source confirmation
   answer: b
-  explanation: "A: A valid type only means the value can be represented, not that the customer exists. B: Correct. This input fails the reference check against the independent customer dimension and should be rejected with traceability. C: Creating dimension entries from the input being checked removes the independent basis for reference validation. D: Arbitrarily replacing the customer falsifies order ownership; passing validation does not mean the repair is correct."
+  explanation: "A: DECIMAL accepts negative values, but type validity does not satisfy the batch's nonnegative business rule. B: Correct. Preserve the raw negative amount and explain why the record was rejected. C: Silently replacing a value destroys the evidence needed to repair it correctly. D: Removing the sign invents a different business amount without confirmation from the source."
 - id: q2
   objective: Preserve input identifiers and raw fields to trace every rejected record.
-  prompt: How can you explain each rejected record over the long term?
+  prompt: Two weeks after a load, support asks why one specific order input was rejected, but the temporary load error URL has expired. What evidence should the warehouse have retained?
   options:
   - id: a
     text: A. Keep only the load error URL and consult temporary error details when needed
@@ -45,21 +45,21 @@ questions:
   explanation: "A: Correct. An independent dimension validates references, and accepted and rejected groups are mutually exclusive and cover all inputs. B: Using the data being checked to prove its own validity bypasses the rule. C: A correct type does not mean a valid reference. D: Rejected data still enters the accepted table and contaminates downstream metrics."
 - id: q4
   objective: Check input coverage, business uniqueness, amounts, and row-by-row results together.
-  prompt: If you see 10 rows totaling 1400.00, why is field-by-field comparison still necessary?
+  prompt: A new accepted table has four rows totaling 100, exactly matching the source's row count and total. A reviewer suspects one order was omitted and another loaded twice with the same amount. What additional evidence is needed?
   options:
   - id: a
-    text: A. A correct total guarantees that every row amount is correct; field-by-field comparison only checks sorting
+    text: A. None; matching row count and total prove that every source order appears once
   - id: b
-    text: B. Sorting by order_id automatically repairs missing and duplicate records, so keys need no further checking
+    text: B. Sort by order_id; ordering the rows will restore the omitted order and remove the duplicate
   - id: c
-    text: C. Unique order IDs prove that amounts, customer references, and statuses are all correct
+    text: C. Check only that order IDs are unique; equal amounts and valid customer references follow automatically
   - id: d
-    text: D. Amount errors can cancel out, as can missing and duplicate records; uniqueness, relationships, and all fields must also be checked
+    text: D. Compare source and target order IDs and fields row by row, including amounts, statuses, and customer references
   answer: d
-  explanation: "A: Amount errors in different orders can offset each other; correct totals do not prove correct details. B: Sorting changes only display order; it does not restore missing records or remove duplicates. C: Key uniqueness checks only one aspect, not amounts, relationships, or statuses. D: Correct. Input coverage, uniqueness, fields, and relationships must be checked together; expected results must not simply copy the output under test."
+  explanation: "A: An omitted order and a repeated order of the same amount can leave both aggregate checks unchanged. B: Sorting only changes display order. C: Unique target IDs would not reveal a missing source ID or prove other fields match. D: Correct. Independent row-by-row checks reveal missing, repeated, or altered records hidden by matching totals."
 - id: q5
   objective: Use known errors to verify that checks fail, and distinguish offline time criteria from actual freshness.
-  prompt: Which approach genuinely tests whether quality checks work?
+  prompt: A tester deliberately repeats one source order and reruns the validation suite; another check compares against a fixed historical cutoff. What outcome would show that these checks mean what the team claims?
   options:
   - id: a
     text: A. After adding duplicates, change the expected row count so the check continues to pass
