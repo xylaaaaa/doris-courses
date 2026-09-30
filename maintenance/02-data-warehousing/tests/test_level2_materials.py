@@ -1,6 +1,7 @@
 """Offline checks for the Data Warehousing Level 2 learner materials."""
 
 import ast
+import re
 import unittest
 from pathlib import Path
 
@@ -28,8 +29,20 @@ class Level2MaterialsTest(unittest.TestCase):
             quiz = next(path.glob("quiz*.yaml"))
             self.assertTrue((path / quiz.name.replace(".yaml", ".ipynb")).is_file(), module)
             payload = yaml.safe_load(quiz.read_text())
-            self.assertEqual(len(payload["questions"]), 5, quiz)
-            self.assertEqual([len(q["options"]) for q in payload["questions"]], [4] * 5)
+            self.assertEqual(len(payload["questions"]), 6, quiz)
+            self.assertEqual([len(q["options"]) for q in payload["questions"]], [4] * 6)
+            self.assertEqual(len({q["objective"] for q in payload["questions"]}), 6, quiz)
+            guide = (path / "course.md").read_text()
+            goals = guide.split("## Learning Objectives\n", 1)[1].split("\n## ", 1)[0]
+            self.assertEqual(len(re.findall(r"^\d+\. ", goals, re.MULTILINE)), 6, path)
+            for question in payload["questions"]:
+                with self.subTest(quiz=quiz.name, question=question["id"]):
+                    self.assertEqual([option["id"] for option in question["options"]], ["a", "b", "c", "d"])
+                    self.assertEqual(len({option["text"] for option in question["options"]}), 4)
+                    self.assertIn(question["answer"], {option["id"] for option in question["options"]})
+                    for option in question["options"]:
+                        self.assertIn(f"{option['id'].upper()}: ", question["explanation"])
+                    self.assertIn(f"{question['answer'].upper()}: Correct.", question["explanation"])
 
     def test_new_notebooks_are_source_only_and_valid(self):
         notebooks = sorted(LEVEL2.glob("module*/*.ipynb"))

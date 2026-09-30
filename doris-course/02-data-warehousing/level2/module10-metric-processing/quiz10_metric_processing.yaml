@@ -1,73 +1,87 @@
 title: 'Module 10: Metric Processing and Serving'
-description: Five multiple-choice questions. No database connection required.
+description: Six scenario-based multiple-choice questions. No database connection required.
 questions:
 - id: q1
   objective: Define a metric with its numerator, denominator, grain, and filters.
-  prompt: What must a metric contract specify?
+  prompt: Finance asks for daily average pre-tax amount per paid order. Cancelled orders must be excluded, a day follows the order event date, and a day with no paid orders should have no average. Which contract is complete enough to reproduce the number?
   options:
   - id: a
-    text: A. Only its display title.
+    text: A. Name it average_order_amount and divide each day’s gross amount by its row count, regardless of status.
   - id: b
-    text: B. Only the dashboard refresh interval.
+    text: B. Record pre-tax amount of paid orders divided by paid-order count, grouped by event date, with a NULL result for a zero denominator.
   - id: c
-    text: C. Its grain, inputs, filters, and calculation.
+    text: C. Divide all order amounts by paid-order count; the cancelled rows affect only the numerator, not the contract.
   - id: d
-    text: D. Only the SQL engine version.
-  answer: c
-  explanation: A metric is reproducible only when its grain, inputs, filters, and calculation are explicit.
+    text: D. Record only a target refresh interval; the dashboard can choose its own population and time rule.
+  answer: b
+  explanation: 'A: A name and division are not enough when cancelled orders and date semantics matter. B: Correct. It states population, numerator, denominator, grain, time rule, and zero-count behavior. C: Numerator and denominator would describe different populations. D: Freshness does not define the business calculation.'
 - id: q2
   objective: Distinguish detailed facts from an aggregate serving table.
-  prompt: Why create an aggregate serving table?
+  prompt: Hundreds of dashboards repeat a daily-by-channel total over millions of orders, while investigators occasionally need to inspect a single order and its customer. Which serving design preserves both needs?
   options:
   - id: a
-    text: A. To delete detailed facts.
+    text: A. Retain order detail and maintain a daily-by-channel aggregate for repeated dashboard queries.
   - id: b
-    text: B. To serve repeated metrics at a declared grain.
+    text: B. Replace order detail with daily totals; customer-level questions can always be reversed from SUM.
   - id: c
-    text: C. To hide every source-data error.
+    text: C. Give each dashboard its own copied fact table so its filters and totals cannot affect another team.
   - id: d
-    text: D. To eliminate JOINs from every query.
-  answer: b
-  explanation: It provides a stable serving grain while retaining detailed facts for drill-down and reconciliation.
+    text: D. Store one total per day but label it as one row per customer for future drill-down.
+  answer: a
+  explanation: 'A: Correct. The service table avoids repeated aggregation at a declared grain, while detail remains available for drill-down and verification. B: Aggregation discards order and customer identity. C: Copies increase synchronization and definition drift. D: Relabeling a day-grain value does not restore customer grain.'
 - id: q3
   objective: Validate metrics using an independent query against detailed data.
-  prompt: How should you accept an aggregate table?
+  prompt: A service table reports 120 orders for Tuesday, while a detail-table aggregation with the same date and status filter reports 117. The service build returned success. What should block publication?
   options:
   - id: a
-    text: A. Reconcile its results with an independent detailed-data query.
+    text: A. Nothing; a successful build is stronger evidence than an independently computed total.
   - id: b
-    text: B. Check only that INSERT succeeded.
+    text: B. Only a slow Query Profile; a fast service query can tolerate a three-order discrepancy.
   - id: c
-    text: C. Check only the physical bucket count.
+    text: C. The mismatch; compare input coverage, filters, and load batches before declaring the serving value correct.
   - id: d
-    text: D. Trust a dashboard screenshot.
-  answer: a
-  explanation: Before publishing, compare row counts and amounts with an independent aggregation of the detailed facts.
+    text: D. A missing dashboard screenshot; the chart is the independent source of truth.
+  answer: c
+  explanation: 'A: Build success says the statement ran, not that it used the intended population. B: Performance evidence cannot resolve a business mismatch. C: Correct. An independent detail query at the same cut and filter exposes a result that needs investigation. D: A chart typically reads the same service value and is not independent evidence.'
 - id: q4
   objective: Use window functions without accidentally changing row grain.
-  prompt: What does a window function typically do?
+  prompt: A service input has Jan 1 APP (2 orders, 40), Jan 1 STORE (1 order, 30), and Jan 2 APP (1 order, 20). The dashboard needs one row per day with APP orders and cumulative gross amount across all channels. What should the two rows show?
   options:
   - id: a
-    text: A. It always removes duplicate rows.
+    text: A. Jan 1 APP=2, cumulative=40; Jan 2 APP=1, cumulative=60, because STORE is excluded from every measure.
   - id: b
-    text: B. It always creates a new table.
+    text: B. Three rows, one per input channel; the window function itself determines the requested day grain.
   - id: c
-    text: C. It always changes daily metrics to monthly metrics.
+    text: C. Jan 1 APP=2, cumulative=70; Jan 2 APP=1, cumulative=20, because each day starts a new running total.
   - id: d
-    text: D. It adds a calculation while retaining the input row grain.
+    text: D. Jan 1 APP=2, cumulative=70; Jan 2 APP=1, cumulative=90, after first aggregating to day grain.
   answer: d
-  explanation: A window calculation annotates existing rows; it does not itself collapse them into groups.
+  explanation: 'A: APP is the conditional count, but gross amount includes both channels. B: A window annotates its input rows; daily aggregation must establish the day grain first. C: The second cumulative value must include the previous day. D: Correct. Daily gross is 70 then 20, so the running totals are 70 and 90.'
 - id: q5
   objective: Publish a narrowly scoped serving query for dashboard consumers.
-  prompt: Why provide a narrowly scoped serving query?
+  prompt: A proposed dashboard query scans fewer tablets than before, but its daily amount differs from the independent detail result. The dashboard needs only date, order count, and amount. What is the correct release decision?
   options:
   - id: a
-    text: A. To expose every physical column.
+    text: A. Publish the faster result and note the mismatch; fewer scanned tablets prove the new metric is better.
   - id: b
-    text: B. To prevent validation.
+    text: B. Expose every fact-table column so the dashboard can repair the amount in its own query.
   - id: c
-    text: C. To limit consumer coupling to reviewed metric fields.
+    text: C. Stop publication, reconcile the mismatch, then expose only the reviewed fields and measure runtime separately.
   - id: d
-    text: D. To guarantee zero refresh cost.
+    text: D. Rename the amount column, since a new label prevents consumers from comparing it to detail.
   answer: c
-  explanation: A narrow contract reduces coupling and makes dashboard columns and semantics reviewable.
+  explanation: 'A: Scan pruning is plan evidence, not metric acceptance. B: Exporting physical detail shifts an unresolved calculation to consumers. C: Correct. First establish a correct, narrow contract; then assess execution cost with runtime evidence. D: A renamed incorrect value remains incorrect.'
+- id: q6
+  objective: Choose exact or approximate distinct counts according to the business tolerance.
+  prompt: A loyalty payout requires an exact monthly count of unique buyers. A high-traffic trend chart can tolerate a stated 2% estimation error. Which choice matches the two contracts?
+  options:
+  - id: a
+    text: A. Use an approximate distinct estimate for both; a small expected error has no payout impact.
+  - id: b
+    text: B. Use exact distinct counting for the payout and an approximate method only for the trend chart, with its tolerance documented.
+  - id: c
+    text: C. Sum each day’s distinct-buyer count for both; buyers returning on another day cannot be counted twice.
+  - id: d
+    text: D. Count all orders for both; multiple orders from one buyer still represent one unique buyer.
+  answer: b
+  explanation: 'A: Even a small estimate error can change a financial payout, which requires exactness. B: Correct. The business tolerance determines whether approximation is acceptable. C: Adding daily distinct counts double-counts buyers active on multiple days. D: Order count and unique-buyer count answer different questions.'

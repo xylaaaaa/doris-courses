@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 orders and customers; Module 8 views |
-| Estimated time | About 90 minutes: reading 45, Lab 40, Quiz 5 |
+| Estimated time | About 93 minutes: reading 45, Lab 40, Quiz 8 |
 
 [Level 2 contents](../README.md) · [Open Lab 9](lab9_modeling_and_joins.ipynb) · [Open Quiz 9](quiz9_modeling_and_joins.ipynb)
 
@@ -22,6 +22,7 @@ After this module, you should be able to:
 3. Check one-to-one versus one-to-many join cardinality using rows, distinct keys, and amounts.
 4. Find missing dimensions with a left join or anti-join.
 5. Read join type, distribution, exchanges, and scans in `EXPLAIN` without confusing a plan with actual runtime evidence.
+6. Keep replayable raw inputs separate from modeled detail and report-ready aggregates.
 
 ## Module Schedule
 
@@ -31,7 +32,7 @@ After this module, you should be able to:
 | 9.2 Grain and joins | Why can a join double an amount? | 15 min |
 | 9.3 Physical joins | Where do matching rows meet? | 10 min |
 | 9.4 Acceptance checks | How do we verify keys, rows, and amounts together? | 8 min |
-| Lab 9 / Quiz 9 | Build and check the order/customer example | 40 / 5 min |
+| Lab 9 / Quiz 9 | Build and check the order/customer example | 40 / 8 min |
 
 ## 9.1 Give Each Warehouse Layer a Job
 
@@ -200,7 +201,7 @@ Repair the Lab's flawed CTE in a new query cell so every fact order has exactly 
 
 ## Knowledge Quiz
 
-Open [Quiz 9](quiz9_modeling_and_joins.ipynb) to check grain, table-model choice, join cardinality, missing dimensions, and plan reading.
+Open [Quiz 9](quiz9_modeling_and_joins.ipynb) to check grain, table-model choice, join cardinality, missing dimensions, plan reading, and replayable warehouse layers.
 
 ## Official References
 

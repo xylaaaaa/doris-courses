@@ -1,73 +1,87 @@
-title: 'Module 11: BI and AI Applications'
-description: Five multiple-choice questions. No database connection required.
+title: 'Module 11: Business Intelligence (BI) and Artificial Intelligence (AI) Applications'
+description: Six scenario-based multiple-choice questions. No database connection required.
 questions:
 - id: q1
   objective: Design a consumer-facing semantic view with stable names.
-  prompt: What does a semantic view provide to BI consumers?
+  prompt: A Business Intelligence (BI) dashboard reads one row per day from a view with order_date, order_count, and gross_amount. The source service table changes to one row per day and channel. How should the published view evolve?
   options:
   - id: a
-    text: A. A stable, reviewed contract for dimensions and measures.
+    text: A. Keep its daily columns and meanings, aggregate across channels inside the view, and reconcile the new result.
   - id: b
-    text: B. A replacement for all source data.
+    text: B. Return one row per channel under the old view name; consumers can infer that its grain changed.
   - id: c
-    text: C. Correct dashboards without testing.
+    text: C. Add channel to the view but continue documenting one row per day.
   - id: d
-    text: D. A physical copy for every consumer.
+    text: D. Expose the new physical table directly; a view cannot survive a source-table refactor.
   answer: a
-  explanation: It gives consumers reviewed names and meanings so dashboards need not reimplement business logic independently.
+  explanation: 'A: Correct. A semantic view can preserve its public grain and field meanings while its implementation changes, subject to checks. B: Multiplying rows breaks existing daily consumers. C: Adding a dimension without changing the declared grain is a contract mismatch. D: Direct physical access increases coupling rather than preserving the interface.'
 - id: q2
   objective: Distinguish dashboard dimensions from metric measures.
-  prompt: In a daily order dashboard, which field is a measure?
+  prompt: A dashboard groups orders by region. It shows gross amount and average amount per order. Which field treatment lets the dashboard roll up several regions without distorting the average?
   options:
   - id: a
-    text: A. order_date
+    text: A. Treat region as an additive measure and add region labels when combining groups.
   - id: b
-    text: B. region label
+    text: B. Treat each region’s average as additive and sum the averages across regions.
   - id: c
-    text: C. gross_amount
+    text: C. Treat region as a dimension, add gross amounts and order counts, then recompute the ratio from those totals.
   - id: d
-    text: D. dashboard title
+    text: D. Treat gross amount as a dimension and select any one region’s amount as the whole-area amount.
   answer: c
-  explanation: Order count and gross amount are measures; the date is a dimension.
+  explanation: 'A: Region labels describe groups; they are not quantities to add. B: Ratios are not additive across groups with different order counts. C: Correct. Gross and count can roll up, while the average must be recalculated from the combined numerator and denominator. D: Selecting one region discards the others.'
 - id: q3
   objective: Prepare a feature projection without overstating model quality.
-  prompt: What does a feature projection provide?
+  prompt: An Artificial Intelligence (AI) team receives a reviewed daily feature view with order count and gross amount. A model scores well on six sample days, and the team claims Doris has proved future prediction accuracy. What is the sound conclusion?
   options:
   - id: a
-    text: A. Guaranteed predictions.
+    text: A. The feature view proves future accuracy because its columns have stable names.
   - id: b
-    text: B. Reviewed input columns for a downstream model or service.
+    text: B. The feature view supplies defined inputs; prediction quality still needs separate evaluation on suitable held-out and later data.
   - id: c
-    text: C. Automatic access to private data.
+    text: C. Model accuracy is guaranteed if the feature query returns no NULL values.
   - id: d
-    text: D. A replacement for monitoring.
+    text: D. The team should move the model into a materialized view; storage location is the missing accuracy evidence.
   answer: b
-  explanation: It prepares named, typed inputs but does not prove that a downstream model is accurate.
+  explanation: 'A: Schema stability is useful but does not measure model generalization. B: Correct. Doris can expose reviewed data; model validation remains downstream work. C: Non-null inputs are only one quality check. D: Precomputing a feature does not evaluate a model.'
 - id: q4
   objective: Validate nulls, freshness, and row counts before serving consumers.
-  prompt: Which checks should precede publishing a consumer view?
+  prompt: A daily view must contain one row for each of seven dates from Jan 1 through Jan 7. A check finds six rows, no NULL amounts, a first date of Jan 1, and a last date of Jan 7. Which release decision is justified?
   options:
   - id: a
-    text: A. Only chart colors.
+    text: A. Publish; the first and last dates prove every intermediate day exists.
   - id: b
-    text: B. Only SQL text length.
+    text: B. Publish; no NULL amounts prove the missing day had zero sales.
   - id: c
-    text: C. Only the model framework version.
+    text: C. Block publication until the missing date is found or an explicit zero-day rule explains it.
   - id: d
-    text: D. Nulls, freshness or date coverage, row counts, and totals.
-  answer: d
-  explanation: Check nulls, date coverage, row counts, and metric totals before publication.
+    text: D. Publish if the query is fast; coverage is a presentation issue for the BI tool.
+  answer: c
+  explanation: 'A: Endpoints do not prove complete coverage between them. B: A missing row is different from a present row with zero amount. C: Correct. Six rows cannot cover seven required dates without another explicit rule. D: Query speed does not satisfy the data contract.'
 - id: q5
   objective: Document the boundary between Doris SQL and downstream BI or AI tools.
-  prompt: What should an integration boundary document?
+  prompt: Doris returns the reviewed pre-tax order amount correctly. A dashboard labels it “cash received,” although refunds and payment records were never joined. Which responsibility statement is accurate?
   options:
   - id: a
-    text: A. Data contract, freshness, access rights, and downstream responsibilities.
+    text: A. The database result is correct, so the dashboard label is automatically correct too.
   - id: b
-    text: B. Only the JDBC driver name.
+    text: B. The dashboard owns the label and can silently change the measure’s business meaning.
   - id: c
-    text: C. Only the visualization theme.
+    text: C. The data contract should say pre-tax order amount; the dashboard must honor that meaning or request a separately defined payment metric.
   - id: d
-    text: D. That downstream accuracy is automatically guaranteed.
-  answer: a
-  explanation: State what Doris guarantees and what BI or AI consumers remain responsible for.
+    text: D. Rename the SQL column to cash_received; a new name makes refunds and payments part of the underlying calculation.
+  answer: c
+  explanation: 'A: Correct SQL values do not validate a downstream interpretation. B: Presentation tools must not turn a contractual measure into a different business event. C: Correct. Doris supplies the defined result; the BI application remains responsible for presenting it faithfully. D: A name change cannot add missing payment and refund facts.'
+- id: q6
+  objective: Scope an external Model Context Protocol server to reviewed Doris data.
+  prompt: A team deploys a separate Model Context Protocol (MCP) server so an assistant can answer questions from published metrics. Its tool can accept generated queries, but the assistant must not read customer phone numbers or raw order detail. What is the safest database-side boundary?
+  options:
+  - id: a
+    text: A. Connect the MCP server as root and rely on the model prompt to avoid sensitive tables.
+  - id: b
+    text: B. Use a dedicated read-only Doris account granted only the reviewed serving views, plus tool limits and query review.
+  - id: c
+    text: C. Give the account whole-database SELECT and hide sensitive table names in the tool description.
+  - id: d
+    text: D. Keep broad database grants but configure a result-row limit; fewer returned rows guarantee no phone numbers appear.
+  answer: b
+  explanation: 'A: A prompt is not an authorization boundary, and root is much broader than the task. B: Correct. Database privileges constrain what the separate server can read; tool controls are additional safeguards. C: Hiding names does not remove underlying privileges. D: A row limit controls volume, not which columns or tables are accessible.'

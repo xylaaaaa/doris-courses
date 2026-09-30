@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Module 8 views, Module 9 grain, and Module 10 metric contracts |
-| Estimated time | About 85 minutes: reading 45, Lab 35, Quiz 5 |
+| Estimated time | About 88 minutes: reading 45, Lab 35, Quiz 8 |
 
 [Level 2 contents](../README.md) · [Open Lab 11](lab11_bi_and_ai_delivery.ipynb) · [Open Quiz 11](quiz11_bi_and_ai.ipynb)
 
@@ -22,6 +22,7 @@ After this module, you should be able to:
 3. Prepare reviewed feature inputs without claiming that a downstream model is accurate.
 4. Check nulls, coverage, freshness, counts, and amounts before publication.
 5. State what Doris SQL proves and what BI or AI tools must validate separately.
+6. Scope an external Model Context Protocol server to reviewed Doris data.
 
 ## Module Schedule
 
@@ -32,7 +33,7 @@ After this module, you should be able to:
 | 11.3 AI feature inputs | What can a data projection prove? | 10 min |
 | 11.4 MCP access | How can an AI tool read Doris safely? | 10 min |
 | 11.5 Publication checks | How do we validate the interface? | 5 min |
-| Lab 11 / Quiz 11 | Publish a view and explain its limits | 35 / 5 min |
+| Lab 11 / Quiz 11 | Publish a view and explain its limits | 35 / 8 min |
 
 ## 11.1 Publish a Consumer Contract, Not Just a Query
 
@@ -178,7 +179,7 @@ A BI team now wants a customer-region filter. The current view cannot provide it
 
 ## Knowledge Quiz
 
-Open [Quiz 11](quiz11_bi_and_ai.ipynb) to check semantic views, dimensions and measures, feature projections, publication checks, and Doris/BI/AI boundaries.
+Open [Quiz 11](quiz11_bi_and_ai.ipynb) to check semantic views, dimensions and measures, feature projections, publication checks, Doris/BI/AI boundaries, and least-privilege MCP access.
 
 ## Official References
 

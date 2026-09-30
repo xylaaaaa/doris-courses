@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 Lab 5 and its `orders_imported` table |
-| Estimated time | About 85 minutes: reading 40, Lab 40, Quiz 5 |
+| Estimated time | About 88 minutes: reading 40, Lab 40, Quiz 8 |
 
 [Level 2 contents](../README.md) · [Open Lab 8](lab8_views_and_materialized_views.ipynb) · [Open Quiz 8](quiz8_views_and_materialized_views.ipynb)
 
@@ -22,6 +22,7 @@ After this module, you should be able to:
 3. Verify materialized-view status and values rather than relying on a successful `CREATE` response.
 4. Use `EXPLAIN` to look for transparent rewriting instead of assuming it happened.
 5. Keep a published consumer contract stable when its physical implementation changes.
+6. Decide whether repeated query cost justifies maintaining a stored result.
 
 ## Module Schedule
 
@@ -31,7 +32,7 @@ After this module, you should be able to:
 | 8.2 Precomputation | When is a materialized view worth its cost? | 10 min |
 | 8.3 Incremental refresh | Does `AUTO` mean row-by-row accumulation? | 12 min |
 | 8.4 Rewrite evidence | How do we know which object a query scanned? | 10 min |
-| Lab 8 / Quiz 8 | Build, inspect, and explain the result | 40 / 5 min |
+| Lab 8 / Quiz 8 | Build, inspect, and explain the result | 40 / 8 min |
 
 ## 8.1 Use a Regular View to Share Meaning
 
@@ -196,7 +197,7 @@ A consumer now wants to filter the daily result by customer. Is the existing MV 
 
 ## Knowledge Quiz
 
-Open [Quiz 8](quiz8_views_and_materialized_views.ipynb) after the reading and Lab. Its five offline questions cover view types, refresh trade-offs, result checks, rewrite evidence, and contract stability.
+Open [Quiz 8](quiz8_views_and_materialized_views.ipynb) after the reading and Lab. Its six scenario questions cover view types, refresh trade-offs, result checks, rewrite evidence, contract stability, and when precomputation pays off.
 
 ## Official References
 

@@ -1,73 +1,87 @@
 title: 'Module 9: Warehouse Modeling and JOINs'
-description: Five multiple-choice questions. No database connection required.
+description: Six scenario-based multiple-choice questions. No database connection required.
 questions:
 - id: q1
   objective: Describe the grain of fact and dimension tables.
-  prompt: What should you document before choosing a JOIN key?
+  prompt: An input has one row per order line; a customer dimension has one current row per customer. The output contract requires one row per order with its total amount and region. What should happen before publishing the join result?
   options:
   - id: a
-    text: A. What one row represents in each input.
+    text: A. Join the line rows and label each result row as an order; the customer key determines the output grain.
   - id: b
-    text: B. Only the expected query latency.
+    text: B. Aggregate lines by order, retaining the customer key, then join and check that each order appears once.
   - id: c
-    text: C. The number of dashboard colors.
+    text: C. Join the line rows and apply DISTINCT to the amounts; equal-priced lines are duplicates.
   - id: d
-    text: D. The FE host name.
-  answer: a
-  explanation: Grain states what one row means. Without it, duplicate matches and incorrect totals are easy to miss.
+    text: D. Group by region only; the resulting region total is also one row per order.
+  answer: b
+  explanation: 'A: Joining to a one-row-per-customer dimension does not collapse multiple lines of one order. B: Correct. First establish order grain, then check the join preserves it. C: Equal amounts can be different legitimate lines, so DISTINCT can discard value. D: Region grain is coarser than order grain and cannot satisfy the stated output contract.'
 - id: q2
   objective: Choose a table model and key that match update semantics.
-  prompt: A customer dimension holds one current row per customer. Which design fits?
+  prompt: A customer feed sends region corrections in business order for the same customer_id. Reports need one current region per customer, while auditors must still replay every original message. Which modeled storage split fits both uses?
   options:
   - id: a
-    text: A. A Duplicate Key on the event timestamp.
+    text: A. Keep raw messages separately and maintain a current Unique Key dimension keyed by customer_id.
   - id: b
-    text: B. An Aggregate Key on the customer name.
+    text: B. Use a single current Unique Key table as the only copy; overwriting a row also preserves every prior message.
   - id: c
-    text: C. A Unique Key on customer_id.
+    text: C. Append every correction to the report-facing dimension and assume a join will choose the latest row automatically.
   - id: d
-    text: D. Random distribution with no key.
-  answer: c
-  explanation: A Unique Key on customer_id represents current state and supports updates to that row.
+    text: D. Key the current dimension by region, so all customers in one region overwrite one another.
+  answer: a
+  explanation: 'A: Correct. The append history supports replay, while the customer-keyed current dimension supports one match per customer after ordered corrections. B: Current-state overwrite does not retain the source message history. C: An append-only dimension can produce multiple matches and inflated report amounts unless an explicit current-row rule is applied. D: Region is not a customer identity; using it as the key merges different customers.'
 - id: q3
   objective: Validate one-to-one and one-to-many JOIN cardinality.
-  prompt: How can duplicate dimension keys affect an order total?
+  prompt: Three orders have amounts 40, 60, and 20 for customers 1, 2, and 3. A staging customer list contains one row for customers 1 and 3 but two rows for customer 2. After an inner join on customer_id, which diagnostic is expected?
   options:
   - id: a
-    text: A. They always delete fact rows.
+    text: A. Four joined rows, three distinct orders, amount 180; customer 2 is multiplying a fact row.
   - id: b
-    text: B. They only change column names.
+    text: B. Four joined rows, four distinct orders, amount 180; the join created a new business order.
   - id: c
-    text: C. They cannot affect aggregates.
+    text: C. Three joined rows, three distinct orders, amount 120; Doris silently chooses one customer row.
   - id: d
-    text: D. They can duplicate fact rows and inflate the total.
-  answer: d
-  explanation: A one-to-many match can duplicate fact rows and inflate an aggregate.
+    text: D. Four joined rows, three distinct orders, amount 120; duplicate matches cannot change SUM.
+  answer: a
+  explanation: 'A: Correct. The 60-unit order matches twice, so row count and amount increase while distinct order IDs stay at three. B: A join duplicates output rows, not source order IDs. C: An ordinary inner join does not pick one duplicate dimension row. D: SUM sees both matched copies of the 60-unit fact.'
 - id: q4
   objective: Find missing dimensions with a LEFT JOIN anti-join check.
-  prompt: Which query pattern finds facts with no matching dimension?
+  prompt: A fact table has 1,000 order IDs, but an inner join with the reviewed customer dimension returns 999 distinct order IDs. Finance needs the missing IDs before accepting the report. Which check answers that question directly?
   options:
   - id: a
-    text: A. INNER JOIN followed by WHERE right_key IS NOT NULL.
+    text: A. Re-run the inner join and sort by customer name; the missing fact will move to the bottom.
   - id: b
-    text: B. LEFT JOIN followed by WHERE right_key IS NULL.
+    text: B. Count dimension rows only; 1,000 customers would prove every order has a match.
   - id: c
-    text: C. GROUP BY without a JOIN.
+    text: C. Left-join facts to the dimension and keep rows where the right-side customer key is NULL.
   - id: d
-    text: D. ORDER BY the dimension name.
-  answer: b
-  explanation: After a LEFT JOIN, a null right-side key identifies an unmatched fact row.
+    text: D. Apply DISTINCT to the inner-join result; it will restore the fact omitted by the join.
+  answer: c
+  explanation: 'A: An inner join has already discarded unmatched facts, and sorting cannot restore them. B: Equal table sizes do not establish key coverage. C: Correct. The left join retains each fact, and a NULL right-side key identifies a missing dimension match. D: DISTINCT can remove duplicate result rows but cannot recover a fact with no match.'
 - id: q5
   objective: Read JOIN distribution evidence from EXPLAIN.
-  prompt: Why inspect EXPLAIN for a JOIN?
+  prompt: EXPLAIN for a large order-to-customer join shows an INNER HASH JOIN and an EXCHANGE that redistributes order rows by customer_id. A reviewer says this proves the amount cannot be inflated. What does the plan actually support?
   options:
   - id: a
-    text: A. To see the JOIN type, condition, and distribution strategy.
+    text: A. It shows the planned join and data movement; key uniqueness and amounts still need result checks.
   - id: b
-    text: B. To prove business keys are unique.
+    text: B. HASH JOIN removes duplicate customer keys before summing order amounts.
   - id: c
-    text: C. To replace result validation.
+    text: C. EXCHANGE proves the customer dimension contains every fact customer.
   - id: d
-    text: D. To avoid defining grain.
+    text: D. The plan alone proves both the actual network bytes and the business total of the completed run.
   answer: a
-  explanation: The plan shows the JOIN condition and possible data movement; elapsed time on a tiny local dataset is not sufficient evidence.
+  explanation: 'A: Correct. EXPLAIN describes planned physical execution, not source-key uniqueness or measured totals. B: Hashing organizes matches; it does not enforce a unique business key. C: Redistribution says nothing about missing dimension keys. D: Runtime work needs a Query Profile, while correctness needs independent row and measure checks.'
+- id: q6
+  objective: Keep replayable raw inputs separate from modeled detail and report-ready aggregates.
+  prompt: A source sends late order corrections. Analysts need daily sales by region, and an auditor must be able to explain how yesterday’s total was rebuilt after a replay. What should the warehouse retain?
+  options:
+  - id: a
+    text: A. Only the final daily-region table; its total is enough to reconstruct which messages arrived.
+  - id: b
+    text: B. Only raw messages; every dashboard can safely reproduce current customer matches on its own.
+  - id: c
+    text: C. Raw arrivals, a version-resolved order-grain fact with a current customer dimension, and a separately derived daily-region serving result.
+  - id: d
+    text: D. One wide table rewritten after every correction, with no retained input IDs or replay record.
+  answer: c
+  explanation: 'A: An aggregate loses the input-level evidence needed for replay. B: Raw data alone leaves every consumer to reinterpret corrections and joins independently. C: Correct. Raw inputs preserve lineage, modeled detail fixes grain and matching rules, and the aggregate serves repeated analysis. D: A final wide table without input identity cannot explain or reproduce a corrected result.'

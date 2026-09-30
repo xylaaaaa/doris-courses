@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 ingestion and quality checks; Module 9 grain and joins |
-| Estimated time | About 95 minutes: reading 50, Lab 40, Quiz 5 |
+| Estimated time | About 98 minutes: reading 50, Lab 40, Quiz 8 |
 
 [Level 2 contents](../README.md) · [Open Lab 10](lab10_metric_processing.ipynb) · [Open Quiz 10](quiz10_metric_processing.ipynb)
 
@@ -22,6 +22,7 @@ After this module, you should be able to:
 3. Reconcile service results against an independent detail query.
 4. Use window functions and conditional aggregation without accidentally changing the intended grain.
 5. Publish a bounded query result for dashboard consumers and separate correctness checks from performance checks.
+6. Choose exact or approximate distinct counts according to the business tolerance.
 
 ## Module Schedule
 
@@ -32,7 +33,7 @@ After this module, you should be able to:
 | 10.3 Window and conditional logic | What happens to row grain? | 12 min |
 | 10.4 Distinct counts and evidence | Exact or approximate; plan or execution? | 10 min |
 | 10.5 Acceptance | Can detail independently reproduce the service value? | 4 min |
-| Lab 10 / Quiz 10 | Build, reconcile, and explain | 40 / 5 min |
+| Lab 10 / Quiz 10 | Build, reconcile, and explain | 40 / 8 min |
 
 ## 10.1 Write a Metric Contract Before SQL
 
@@ -220,7 +221,7 @@ Run a new date-by-customer query over `orders_imported` and reconcile it indepen
 
 ## Knowledge Quiz
 
-Open [Quiz 10](quiz10_metric_processing.ipynb) to check metric contracts, service tables, reconciliation, window functions, and consumer queries.
+Open [Quiz 10](quiz10_metric_processing.ipynb) to check metric contracts, service tables, reconciliation, window functions, consumer queries, and exact versus approximate distinct counts.
 
 ## Official References
 
