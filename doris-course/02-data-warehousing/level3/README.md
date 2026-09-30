@@ -159,3 +159,9 @@ Rerun Lab 14's “1. Prepare the table and remove leftover objects.” It delete
 - [ ] Write a resource runbook with configuration, evidence, and dependency-aware rollback.
 
 For further practice, repeat the Labs in an isolated multi-node environment. Test view-only access and unauthorized group denial with ordinary consumers, inspect tablet replicas on multiple BEs, and observe CPU enforcement and per-FE queues with the required cgroup configuration.
+
+## Extended Core Publication and Recovery
+
+Lab 12 adds reconciled cutover/rollback at a controlled simulated write boundary, two ordinary regional identities with database Row Policies, and real tagged FE audit records. Users and policies are temporary; the isolated `_l3` data tables remain for review.
+
+Lab 13 performs real repository BACKUP/RESTORE after force-dropping only its dedicated source. It explicitly starts a loopback-only MinIO service capped at 512 MiB RAM and preserves snapshot objects. The restore target uses a separate `dw_course_l1_*_restore_l3` database. See [the backup environment](../environments/backup/README.md). Sharing a host with Doris does not make this a disaster-recovery deployment. Ranger masking, Storage Vaults and multi-node fault recovery remain separately scoped extensions, not implied by these successful drills.

@@ -98,12 +98,21 @@ class WarehouseLab:
             write_timeout=120,
         )
         self.execute(f"CREATE DATABASE IF NOT EXISTS {self.database}")
-        self.execute(f"USE {self.database}")
-        self.execute("SET time_zone = '+08:00'")
-        self.execute("SET group_commit = 'off_mode'")
+        self._configure_session()
         if in_notebook():
             install_styles()
             card(self.database, "ok", "Connected to the lab database")
+
+    def _configure_session(self):
+        """Apply settings that are lost when the SQL connection is reopened."""
+        self.execute(f"USE {self.database}")
+        self.execute("SET time_zone = '+08:00'")
+        self.execute("SET group_commit = 'off_mode'")
+
+    def restore_session(self):
+        """Reconnect after a Docker network change and restore the lab SQL session."""
+        self.connection.ping(reconnect=True)
+        self._configure_session()
 
     def query(self, sql, params=None):
         with self.connection.cursor() as cursor:

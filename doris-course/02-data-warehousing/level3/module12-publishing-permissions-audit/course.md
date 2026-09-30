@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 3 |
 | Product scope | Apache Doris 4.x; examples use the single-node course sandbox |
 | Prerequisites | Level 1 order tables; the Level 2 consumer view is used only in the independent exercise |
-| Suggested time | About 78 minutes: 30 minutes reading, 40 minutes Lab, 8 minutes Quiz |
+| Suggested time | About 118 minutes: reading 40, Lab 70, Quiz 8; first-start image downloads/builds are additional |
 
 [Level 3 contents](../README.md) · [Open Lab 12](lab12_publishing_permissions_audit.ipynb) · [Open Quiz 12](quiz12_publishing_permissions_audit.ipynb)
 
@@ -26,7 +26,7 @@ This module breaks account delivery into four steps: define the data product, gr
 
 After this module, you should be able to:
 
-1. Write a consumer contract covering the object, grain, field meanings, freshness, access scope, and owners.
+1. Plan a validated publication cutoff and distinguish safe rollback from a stale retained copy.
 2. Distinguish users, roles, privileges, and object scopes, including data access and administrative privileges.
 3. Grant only the required object privileges through a dedicated role.
 4. Retain release evidence using SHOW GRANTS, SHOW ROLES, and a change record, and distinguish it from audit logs.
@@ -42,7 +42,7 @@ After this module, you should be able to:
 | 12.3 How do you prove the grant is sufficient and scoped? | What can each piece of release evidence establish? | 6 minutes |
 | 12.4 How do you retire dashboard access? | What should be revoked, and who is affected? | 5 minutes |
 | 12.5 What if table privileges are too broad? | When do you need column privileges, a Row Policy, or masking? | 4 minutes |
-| Lab 12 | Create a role, test an ordinary user's access, and clean up | 40 minutes |
+| Lab 12 | Existing foundations and extended core evidence | 70 minutes |
 | Quiz 12 | Check publishing and access-governance decisions | 8 minutes |
 
 ## 12.1 What Does BI Actually Need?
@@ -191,7 +191,7 @@ FROM ROLE 'course_bi_reader_l3';
 DROP ROLE IF EXISTS course_bi_reader_l3;
 ```
 
-Revoking a shared role's privileges interrupts every consumer relying on those privileges. Confirm dependencies before that step. Lab 12 has only one temporary consumer: it tests access, removes that user's membership and account, then revokes the view grant and removes the role and Lab view.
+Revoking a shared role's privileges interrupts every consumer relying on those privileges. Confirm dependencies before that step. The initial role drill has only one temporary consumer: it tests access, removes that user's membership and account, then revokes the view grant and removes the role and Lab view.
 
 Revocation changes access:
 
@@ -213,6 +213,14 @@ Two new requirements arrive: only Finance may see `paid_amount` and `refund_amou
 
 Test each mechanism with an ordinary consumer. A successful root query does not establish the consumer's access boundary. Define the restriction, affected objects, and acceptance checks before choosing a mechanism. See [Data Access Control](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/data/).
 
+## 12.6 Prove a Release Boundary and Its Consumer Controls
+
+A stable table name can switch to a prepared table atomically, but Doris does not thereby backfill data, validate a business contract, or catch up a change stream for you. The extended Lab pauses its simulated writer, applies a final delta, reconciles all rows, swaps the names with `swap=true`, and rehearses rollback before resuming writes. Once the released table receives another write, the retained old copy is no longer a current rollback target. See [ALTER TABLE REPLACE](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/table-and-view/table/ALTER-TABLE-REPLACE/).
+
+The next drill separates table privilege from row visibility. Two ordinary users have the same table-level read privilege, while restrictive Row Policies constrain them to different regions. A query asking for the other region still returns no rows. This is database enforcement, unlike a dashboard filter; `root` is not the correct identity for validating it. The scope and policy combination rules are in [CREATE ROW POLICY](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/data-governance/CREATE-ROW-POLICY/).
+
+Finally, the Lab reads real tagged query entries from the course FE audit file. Grant metadata answers what an identity may do, query results establish the controlled experiment's visible rows, and audit records describe observed execution. Keep those kinds of evidence separate. Collecting one local file does not establish multi-node coverage or compliant retention; consult [FE log management](https://doris.apache.org/docs/4.x/admin-manual/log-management/fe-log/) for production operation.
+
 ## Hands-on Lab: Publish a Scoped BI Reader Role
 
 Open [Lab 12](lab12_publishing_permissions_audit.ipynb) and complete these steps:
@@ -222,6 +230,9 @@ Open [Lab 12](lab12_publishing_permissions_audit.ipynb) and complete these steps
 3. Observe a table grant, then narrow the role to the course view.
 4. As a temporary ordinary user, verify that the view is readable, the base table is denied, and the view is denied after membership is revoked.
 5. Record the role configuration and example change record; clean up the test user, role, and Lab view.
+6. Rehearse a reconciled table cutover and paused-writer rollback, then identify the retained copy's post-release gap.
+7. Test two regional ordinary users against restrictive Row Policies, and inspect real tagged FE audit records.
+8. Remove the temporary regional users and policies; retain the isolated data tables for review.
 
 ### Prerequisites and Scope
 

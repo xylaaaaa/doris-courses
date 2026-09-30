@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 3 |
 | Product scope | Apache Doris 4.x; examples use the single-node course sandbox |
 | Prerequisites | Level 1 table models and ingestion; Module 12 change evidence and revocation |
-| Suggested time | About 78 minutes: 30 minutes reading, 40 minutes Lab, 8 minutes Quiz |
+| Suggested time | About 123 minutes: reading 40, Lab 75, Quiz 8; first-start image downloads/builds are additional |
 
 [Level 3 contents](../README.md) · [Open Lab 13](lab13_storage_and_lifecycle.ipynb) · [Open Quiz 13](quiz13_storage_lifecycle.ipynb)
 
@@ -19,7 +19,7 @@ This is a Duplicate Key table. A colleague runs `DELETE FROM orders WHERE order_
 - Queries must apply the delete condition until background Compaction removes the rows.
 - Nobody has a recovery plan if the condition was wrong.
 
-Before maintenance, decide four things: the cleanup boundary, the physical layout, the evidence to record, and the recovery path. This module compares `TRUNCATE` with `DROP/RECOVER` on isolated tables and turns the procedure into a maintenance runbook.
+Before maintenance, decide four things: the cleanup boundary, the physical layout, the evidence to record, and the recovery path. This module compares `TRUNCATE` with `DROP/RECOVER`, then performs a real repository backup and isolated restore. The procedure becomes a maintenance runbook with a verified recovery cutoff.
 
 ### Learning Objectives
 
@@ -30,7 +30,7 @@ After this module, you should be able to:
 3. Record before-and-after maintenance evidence with SHOW PARTITIONS, SHOW TABLETS, and SHOW CREATE TABLE.
 4. Perform partition-level lifecycle operations without clearing the whole table.
 5. Distinguish query visibility, metadata changes, physical space reclamation, and the role of Compaction.
-6. Write a maintenance runbook covering scope, prechecks, changes, evidence, and recovery.
+6. Write a maintenance runbook with a tested recovery source and an explicit snapshot cutoff.
 
 ## Module Schedule
 
@@ -41,7 +41,7 @@ After this module, you should be able to:
 | 13.3 What evidence should maintenance retain? | What does each SHOW statement establish? | 6 minutes |
 | 13.4 What changes after TRUNCATE? | How do visibility, metadata, and physical space differ? | 6 minutes |
 | 13.5 How do you write a maintenance runbook? | What scope, checks, evidence, and recovery steps are required? | 4 minutes |
-| Lab 13 | Compare TRUNCATE and DROP/RECOVER on isolated tables | 40 minutes |
+| Lab 13 | Existing foundations and extended core evidence | 75 minutes |
 | Quiz 13 | Check lifecycle decisions | 8 minutes |
 
 ## 13.1 Why Clean Up by Partition?
@@ -213,6 +213,16 @@ The next operator needs more than “clear January.” Specify the table and par
 | Recovery | The experiment can reload `(2025-01-15, 130001, PAID, 100.00)`; production reloads the partition from its verified archive or upstream batch |
 
 Verify recovery before cleanup: read the archived data and reconcile its rows with the target partition. Do not wait for a mistaken deletion to discover that the archive is unusable. Recycle-bin recovery is a time-limited emergency option in addition to this precheck.
+
+## 13.6 Test Recovery from a Real Repository Snapshot
+
+Recycle-bin recovery and repository restore have different prerequisites. `RECOVER` depends on retained Doris metadata and data. `BACKUP SNAPSHOT` creates a full snapshot in a registered remote repository; `RESTORE SNAPSHOT` reads a selected snapshot timestamp. Neither recovers writes after that cutoff automatically.
+
+The extended Lab starts a small local MinIO service, registers an S3-compatible repository, backs up a dedicated ordinary table, waits for the real job to finish, and force-drops only that table. It then restores under another name in a separate course database and reconciles all ordered rows, count and amount against its independently recorded cutoff. This proves more than an upload status or a hypothetical runbook.
+
+The supported backup scope matters: this coupled single-node exercise uses no asynchronous MV or Storage Policy on the backed-up table. It does not claim to cover storage-compute separation, cluster-wide configuration, external lake data, or post-snapshot replay. See the official [Backup](https://doris.apache.org/docs/4.x/admin-manual/data-admin/backup-restore/backup/) and [Restore](https://doris.apache.org/docs/4.x/admin-manual/data-admin/backup-restore/restore/) guides.
+
+Although the protocol is real, Doris and MinIO share a host here. Losing that host can lose both copies. Production disaster recovery requires an independent failure domain and a tested recovery-point objective (RPO) and recovery-time objective (RTO). Snapshot retention and credential management are also operational responsibilities, not consequences of a `FINISHED` status.
 
 ## Hands-on Lab: Partition Lifecycle on Isolated Tables
 
