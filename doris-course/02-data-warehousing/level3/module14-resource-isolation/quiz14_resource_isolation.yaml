@@ -1,87 +1,124 @@
-title: '模块 14：资源隔离与查询保护'
-description: 共 6 道情境单选题，不需要连接数据库。提交后查看每个选项的解析。
+title: 'Module 14: Resource Isolation and Query Protection'
+description: Six scenario-based single-choice questions. No database connection is required. Submit each
+  answer to read feedback on every option.
 questions:
 - id: q1
-  objective: 说明一条查询按什么顺序选定 Workload Group
-  prompt: 商业智能（BI）账号的账号属性 default_workload_group 是看板组 course_dashboard_l3，它对看板组和临时分析组 course_adhoc_l3 都有 USAGE_PRIV。它在会话里执行了 SET workload_group = 'course_adhoc_l3'，然后提交一条没有额外查询提示的看板查询。这条查询落在哪个组？
+  objective: Explain the precedence used to select a query's Workload Group
+  prompt: A business intelligence (BI) account defaults to course_dashboard_l3 and has USAGE_PRIV on both
+    that group and course_adhoc_l3. The session runs SET workload_group = 'course_adhoc_l3', then submits
+    a dashboard query without a query-level routing hint. Which group is selected?
   options:
   - id: a
-    text: A. course_dashboard_l3，账号属性优先于会话变量
+    text: A. course_dashboard_l3, because the account property takes precedence over the session variable
   - id: b
-    text: B. course_adhoc_l3，会话变量不为空时优先于账号属性
+    text: B. course_adhoc_l3, because the nonempty session group takes precedence over the account default
   - id: c
-    text: C. normal，两处都设置了组时 Doris 回到默认组
+    text: C. normal, because conflicting settings cause a fallback
   - id: d
-    text: D. 取决于哪个组当前还有空闲的执行名额
+    text: D. Whichever group currently has a free running slot
   answer: b
-  explanation: "A: 在没有查询级 SET_VAR 提示时，会话变量优先于账号属性。B: 正确。本题没有更高优先级的查询提示，因此会话变量指定临时分析组；账号也有该组的 USAGE_PRIV。完整优先级是查询提示、会话变量、账号属性、normal。C: 只有前面的路由方式都未指定组时才使用 normal。D: 选组发生在排队之前；名额只决定所选组内是执行、排队还是拒绝。"
+  explanation: 'A: Without a higher-priority query hint, the session variable overrides the account default.
+    B: Correct. The selected session group is authorized; full precedence is query hint, session setting,
+    account default, then normal. C: normal is the fallback when earlier settings do not select a group.
+    D: Selection occurs before admission; capacity determines what happens within the selected group.'
 - id: q2
-  objective: 根据 max_concurrency、max_queue_size 和 queue_timeout 判断查询会执行、排队还是被拒绝
-  prompt: 三条各需 1 分钟的慢查询进入同一个 Frontend（FE）上的临时分析组。该组 max_concurrency=2、max_queue_size=0，前两条已占满执行名额。第三条查询会怎样？
+  objective: Predict execution, queuing, or rejection from max_concurrency, max_queue_size, and queue_timeout
+  prompt: Three uncached scan queries, each needing one minute, enter an ad hoc group on the same Frontend
+    (FE), with queue bypass disabled. max_concurrency=2 and max_queue_size=0. The first two occupy both
+    running slots. What happens to the third?
   options:
   - id: a
-    text: A. 进入队列，等前两条中的一条结束后执行
+    text: A. It queues until one of the running queries finishes
   - id: b
-    text: B. 立即被拒绝，报错 query waiting queue is full
+    text: B. It is rejected immediately with query waiting queue is full
   - id: c
-    text: C. 自动转到 normal 组执行
+    text: C. It automatically moves to normal
   - id: d
-    text: D. 进入队列，排队 30 秒后报错 query queue timeout
+    text: D. It queues for 30 seconds, then fails with query queue timeout
   answer: b
-  explanation: "A: 排队的前提是还有排队位置；题干明确队列容量为 0。B: 正确。两条查询占满同一 FE 上的两个执行名额，第三条没有可用队列位置，立即被拒绝。C: 名额满了不会自动换组；选组早于排队。D: 题干没有设置 30 秒的排队时限，而且根本没有队列位置可等。"
+  explanation: 'A: There is no waiting position because queue capacity is zero. B: Correct. Both slots
+    on this FE are occupied and the group has no queue. C: Admission failure does not change the selected
+    group. D: No 30-second wait was configured, and no queue position exists.'
 - id: q3
-  objective: 说明内存和 CPU 上限作用在哪里，以及 CPU 上限生效的前提
-  prompt: 一套集群的 Backend（BE）没有配置 doris_cgroup_cpu_path。管理员给临时分析组设置了 "max_cpu_percent" = "10" 和 "max_memory_percent" = "30"。测试时该 BE 没有其他组的查询在运行，但临时分析查询仍能用满中央处理器（CPU）。原因是什么？
+  objective: Explain where memory and CPU limits apply and what CPU enforcement requires
+  prompt: A cluster's Backend (BE) has no doris_cgroup_cpu_path configured. An administrator sets the
+    ad hoc group's max_cpu_percent to 10 and max_memory_percent to 30. With no other group's queries running
+    on that BE, ad hoc work still uses all available central processing unit (CPU) capacity. Why?
   options:
   - id: a
-    text: A. 修改组的属性后要重启 FE，新的 CPU 上限才会生效
+    text: A. The FE must restart before changed CPU settings take effect
   - id: b
-    text: B. max_cpu_percent 只限制排队中的查询，不限制执行中的查询
+    text: B. max_cpu_percent limits waiting queries rather than running queries
   - id: c
-    text: C. CPU 上限依赖 BE 的 CPU cgroup，没有配置时只是一条配置；内存上限不依赖 cgroup，仍然有效
+    text: C. CPU enforcement requires a BE CPU cgroup; without it the CPU setting is unenforced, while
+      Doris memory limits still apply
   - id: d
-    text: D. max_cpu_percent 是整个集群的 CPU 总额度，只有一个组在用 CPU 时可以用满所有 BE
+    text: D. max_cpu_percent is a shared cluster allowance, so a lone group may use every BE fully
   answer: c
-  explanation: "A: 修改组的属性不需要重启 FE，而且 CPU 上限是在 BE 上执行的，问题不在 FE。B: 排队由 max_concurrency 和 max_queue_size 决定；max_cpu_percent 限制的正是执行中的查询能用的 CPU。C: 正确。BE 通过 Linux CPU cgroup 执行 max_cpu_percent 和 min_cpu_percent；doris_cgroup_cpu_path 为空时 BE 不会为组创建 cgroup，CPU 上限不起作用。内存上限由 BE 自己统计和限制，按每个 BE 的 mem_limit 计算，不依赖 cgroup。D: 内存和 CPU 属性都作用在每个 BE 上，按 BE 分别计算，不是整个集群共用的额度；而且 max_cpu_percent 是硬上限，即使 BE 空闲也不能超过。"
+  explanation: 'A: Restarting FE does not supply the missing BE cgroup enforcement. B: Queue properties
+    control waiting; the CPU cap concerns execution. C: Correct. Without doris_cgroup_cpu_path, BE does
+    not create the group CPU cgroup. Memory accounting and limits use each BE''s mem_limit and do not
+    require cgroups. D: These limits apply per BE, not as a shared cluster allowance; an enforced maximum
+    remains a cap even when the BE is otherwise idle.'
 - id: q4
-  objective: 用 USAGE_PRIV 和 default_workload_group 让查询落到正确的组，并说明 bypass_workload_group 为什么不是隔离边界
-  prompt: 分析师只有临时分析组的 USAGE_PRIV，账号默认组也是它，查询没有额外路由提示。组内正在运行 3 条查询，已达 max_concurrency=3；队列里还有 2 条，已达 max_queue_size=2。他在会话里执行 SET bypass_workload_group = true 后重新提交。下面哪项描述正确？
+  objective: Route queries with USAGE_PRIV and default_workload_group, and explain why bypass_workload_group
+    is not an isolation boundary
+  prompt: An analyst has USAGE_PRIV only on the ad hoc group, which is also the account default. Three
+    queries occupy max_concurrency=3 and two occupy max_queue_size=2. The analyst sets bypass_workload_group=true
+    and resubmits an uncached scan without another routing hint. Which description is correct?
   options:
   - id: a
-    text: A. 设置失败，只有管理员能修改 bypass_workload_group
+    text: A. The setting fails because only an administrator can change bypass_workload_group
   - id: b
-    text: B. 查询跳过 FE 的排队，但仍在临时分析组执行，USAGE_PRIV 检查和 BE 上的内存上限照常生效
+    text: B. The query skips FE queuing but stays in the ad hoc group; usage checks and BE memory limits
+      still apply
   - id: c
-    text: C. 查询改到 normal 组执行，不再受临时分析组的任何限制
+    text: C. The query moves to normal and loses every ad hoc-group limit
   - id: d
-    text: D. 查询跳过了排队，也跳过了 USAGE_PRIV 检查，可以借此使用看板组
+    text: D. The query skips both queuing and usage checks, allowing it to use the dashboard group
   answer: b
-  explanation: "A: bypass_workload_group 是普通会话变量，设置它不需要任何权限，普通账号就能执行。B: 正确。它只跳过排队这一步：选组、USAGE_PRIV 检查和 BE 上的内存上限都照常生效，失效的只有 max_concurrency、max_queue_size 和 queue_timeout。所以排队不能当作隔离边界，真正兜底的是 BE 上的资源上限、管理员设定的执行时限和 SQL Block Rule。C: 跳过排队不会换组；本题没有查询级提示或会话级改组，账号默认组仍是临时分析组。D: USAGE_PRIV 检查发生在排队判断之前，跳过排队不会跳过它；切到没有权限的看板组，查询仍会被拒绝。"
+  explanation: 'A: This is an ordinary session setting and does not require administrative permission.
+    B: Correct. Only queuing controls are bypassed; selection, USAGE_PRIV checks, and BE memory enforcement
+    remain. Consequently queuing alone is not an enforceable isolation boundary. C: Bypass does not change
+    routing. D: It does not grant usage of an unauthorized group; selecting that group would still fail.'
 - id: q5
-  objective: 区分 query_timeout、Workload Policy 和 SQL Block Rule 的生效时机和作用范围
-  prompt: 要求分析师账号的查询一旦需要扫描超过 2 个分区，就在执行前被拒绝，而且分析师自己改不掉这个限制。应该用哪种手段？
+  objective: Distinguish the timing and scope of query_timeout, Workload Policy, and SQL Block Rule
+  prompt: An analyst's uncached scan must be rejected before execution when it exceeds two partitions,
+    and the analyst must not be able to remove the restriction. Which mechanism meets the requirement?
   options:
   - id: a
-    text: A. 在分析师的会话里执行 SET query_timeout = 60
+    text: A. SET query_timeout = 60 in the analyst's session
   - id: b
-    text: B. 创建条件为 query_time > 60000、动作为 cancel_query 的 Workload Policy
+    text: B. A Workload Policy with query_time > 60000 and cancel_query
   - id: c
-    text: C. 创建限制 partition_num 的 SQL Block Rule，由管理员通过账号属性 sql_block_rules 绑定到分析师账号
+    text: C. A partition_num SQL Block Rule associated with the account by an administrator through sql_block_rules
   - id: d
-    text: D. 把临时分析组的 max_concurrency 调成 1
+    text: D. Set the ad hoc group's max_concurrency to 1
   answer: c
-  explanation: "A: query_timeout 在执行中才取消查询，不会在执行前拒绝；而且会话变量分析师自己就能改回去。B: Workload Policy 在执行过程中检查条件，查询被取消前已经执行了一段时间；这条策略按执行时间判断，不看扫描了多少分区。C: 正确。扫描规则在执行前按执行计划中的分区数检查，命中就直接拒绝，不占用 BE 资源；账号属性 sql_block_rules 只有管理员能设置，分析师自己不能解除绑定。D: 并发上限只决定同时执行多少条，不限制一条查询扫描多少分区，大扫描仍然可以执行。"
+  explanation: 'A: A timeout cancels execution after resources have already been used, and the analyst
+    can change the session value. B: This policy checks elapsed time during execution rather than partition
+    scope before scanning. C: Correct. The scan rule checks the plan before execution, and the administrator-controlled
+    account binding cannot be removed by the analyst. D: Concurrency controls the number of running requests,
+    not a request''s scan scope.'
 - id: q6
-  objective: 编写包含资源组、路由、保护规则、观测证据和撤销顺序的资源 Runbook
-  prompt: 值班同事要下线旧的临时分析组。两个账号把它设为默认组，一条 Workload Policy 仍引用它，一条全局 SQL Block Rule 仍在拦截查询；专用角色也持有这个组的 USAGE_PRIV，且角色没有其他用途。哪份回滚步骤能完整处理这些依赖？
+  objective: Write a resource runbook covering groups, routing, protection rules, observations, and rollback
+    order
+  prompt: An ad hoc group is retiring. Two accounts still use it as their default, a Workload Policy references
+    it, a global SQL Block Rule remains active, and a dedicated role holds its USAGE_PRIV. The role has
+    no other purpose. Which rollback handles all dependencies?
   options:
   - id: a
-    text: A. 直接删除资源组；账号、策略、角色授权和全局规则会随组一起自动删除
+    text: A. Drop the group directly; accounts, policies, role grants, and the rule are removed automatically
   - id: b
-    text: B. 只把两个账号改回 normal；其余对象留着也不会再影响任何会话
+    text: B. Change only the two defaults to normal; all remaining objects become harmless
   - id: c
-    text: C. 只删除全局规则和角色，保留 Workload Policy；以后重建同名组可继续使用旧策略
+    text: C. Remove the global rule and role but retain the policy for a future group with the same name
   - id: d
-    text: D. 先记录运行和排队状态，再移除策略引用、改回账号默认组、撤销组授权并删除无其他用途的角色和组；清理全局规则，最后复核各对象
+    text: D. Record running and waiting state, remove the policy dependency, change account defaults,
+      revoke usage, remove the unused role and group, remove the global rule, then verify
   answer: d
-  explanation: "A: 被策略和账号默认组引用的资源组不能当作无依赖对象直接删除，组删除也不自动清理角色授权和规则。B: 账号路由只是依赖之一，全局规则仍会影响其他会话，策略和授权也会留下。C: 保留旧策略会留下无效或意外重新生效的依赖。D: 正确。先记录影响，再解除引用和路由、回收授权、清理规则，最后验证资源组、角色和规则都已按计划撤销。"
+  explanation: 'A: Referenced groups cannot simply be dropped, and group deletion does not clean up role
+    grants or rules. B: Routing is only one dependency; the global rule still affects other sessions and
+    the policy and grants remain. C: An old policy leaves an invalid or potentially reactivated dependency.
+    D: Correct. Record impact, remove references and routing, revoke access, clean up the objects, and
+    verify the resulting groups, roles, and rules.'

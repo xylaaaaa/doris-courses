@@ -1,110 +1,114 @@
-# 模块 12：发布、权限与审计
+# Module 12: Publishing, Permissions, and Audit
 
-| 课程信息 | 说明 |
+| Course Information | Details |
 | --- | --- |
-| 所属课程 | Data Warehousing with Apache Doris · Level 3 |
-| 产品范围 | Apache Doris 4.x；示例使用课程单节点沙箱 |
-| 前置知识 | Level 1 的订单表；Level 2 的消费者视图仅用于独立练习 |
-| 建议用时 | 约 78 分钟：阅读 30 分钟、实验 40 分钟、测验 8 分钟 |
+| Course | Data Warehousing with Apache Doris · Level 3 |
+| Product scope | Apache Doris 4.x; examples use the single-node course sandbox |
+| Prerequisites | Level 1 order tables; the Level 2 consumer view is used only in the independent exercise |
+| Suggested time | About 78 minutes: 30 minutes reading, 40 minutes Lab, 8 minutes Quiz |
 
-[Level 3 目录](../README.md) · [打开 Lab 12](lab12_publishing_permissions_audit.ipynb) · [打开 Quiz 12](quiz12_publishing_permissions_audit.ipynb)
+[Level 3 contents](../README.md) · [Open Lab 12](lab12_publishing_permissions_audit.ipynb) · [Open Quiz 12](quiz12_publishing_permissions_audit.ipynb)
 
-## 单元目标
+## Module Goal
 
-Level 2 最后发布了语义视图 `bi_order_metrics_l2`。现在 BI 负责人找到你：“看板下周上线，给我开个账号。”
+Level 2 ended by publishing the semantic view `bi_order_metrics_l2`. The business intelligence (BI) owner now asks: “The dashboard goes live next week. Can you give us an account?”
 
-有两种很快的做法，代价都在后面：
+Two quick approaches create problems later:
 
-- 把 root 密码发过去：BI 同事同时拥有了删表、改权限的能力，审计日志里只有 root，分不清是谁执行的；
-- 新建账号并授予 `SELECT_PRIV ON *.*.*`：看板只需要一个视图，这个账号却能读所有明细表，以后新建的表也会自动可读。
+- Share the root password. BI users can now drop tables and change permissions. The audit log records root, so it cannot distinguish the people using that account.
+- Create an account with `SELECT_PRIV ON *.*.*`. The dashboard needs one view, but the account can read every detail table, including tables created later.
 
-几个月后看板下线，没人记得当初开了哪些权限，也就说不清该收回什么。
+When the dashboard is retired a few months later, nobody remembers which permissions were granted or which ones should be removed.
 
-本单元把“开个账号”拆成四步：先写清交付什么，再用专用角色只授予需要的权限，然后留下可以复核的证据，最后在下线时干净地撤销。
+This module breaks account delivery into four steps: define the data product, grant only the required privileges through a dedicated role, retain evidence that another person can check, and revoke access when the product is retired.
 
-### 学习目标
+### Learning Objectives
 
-完成本单元后，你应当能够：
+After this module, you should be able to:
 
-1. 为数据产品写出对象、粒度、字段语义、新鲜度、访问范围和责任人的消费者契约；
-2. 区分用户、角色、权限和对象范围，并区分数据访问权限与 `GRANT_PRIV`、`ADMIN_PRIV` 等管理权限；
-3. 通过专用角色只授予消费者需要的对象权限，而不是共享 root 或授予全局权限；
-4. 用 `SHOW GRANTS`、`SHOW ROLES` 和变更说明保留发布证据，并区分它们与真实审计日志；
-5. 区分撤销用户的角色与撤销角色上的权限，按影响范围下线访问并复核结果；
-6. 判断什么时候表级权限不够，需要列权限、Row Policy 或脱敏。
+1. Write a consumer contract covering the object, grain, field meanings, freshness, access scope, and owners.
+2. Distinguish users, roles, privileges, and object scopes, including data access and administrative privileges.
+3. Grant only the required object privileges through a dedicated role.
+4. Retain release evidence using SHOW GRANTS, SHOW ROLES, and a change record, and distinguish it from audit logs.
+5. Distinguish revoking role membership from revoking a role's privileges, and verify the effect of each.
+6. Decide when table privileges need column privileges, a Row Policy, or data masking.
 
-## 单元安排
+## Module Schedule
 
-| 小节 | 核心问题 | 建议用时 |
+| Section | Main question | Suggested time |
 | --- | --- | ---: |
-| 12.1 BI 要的到底是什么？ | 交付对象、粒度和字段语义怎样写成契约 | 7 分钟 |
-| 12.2 应该给多大的权限？ | 角色、权限类型和对象范围如何取舍 | 8 分钟 |
-| 12.3 如何证明授权刚好够用？ | 发布证据各自证明什么 | 6 分钟 |
-| 12.4 看板下线后如何收回权限？ | 撤销顺序和影响范围 | 5 分钟 |
-| 12.5 表级权限不够细怎么办？ | 列权限、Row Policy 和脱敏 | 4 分钟 |
-| Lab 12 | 创建角色、验证普通用户访问并清理 | 40 分钟 |
-| Quiz 12 | 检查发布治理概念 | 8 分钟 |
+| 12.1 What does BI actually need? | How do object, grain, and field meanings become a contract? | 7 minutes |
+| 12.2 How much access should you grant? | How do roles, privilege types, and object scopes differ? | 8 minutes |
+| 12.3 How do you prove the grant is sufficient and scoped? | What can each piece of release evidence establish? | 6 minutes |
+| 12.4 How do you retire dashboard access? | What should be revoked, and who is affected? | 5 minutes |
+| 12.5 What if table privileges are too broad? | When do you need column privileges, a Row Policy, or masking? | 4 minutes |
+| Lab 12 | Create a role, test an ordinary user's access, and clean up | 40 minutes |
+| Quiz 12 | Check publishing and access-governance decisions | 8 minutes |
 
-## 12.1 BI 要的到底是什么？
+## 12.1 What Does BI Actually Need?
 
-开账号之前，先问清楚看板要读哪个对象。课程里有两个候选：
+Before creating an account, identify the object the dashboard must read. The course provides two candidates:
 
-| 候选对象 | 一行代表什么 | 包含什么 |
+| Candidate object | What one row represents | Contents |
 | --- | --- | --- |
-| `orders_imported` | 一笔订单 | 客户、金额、状态、事件时间、实付和退款、地区等原始字段；10 行合计 1400.00 |
-| `bi_order_metrics_l2` | 一天 | `order_date`、`order_count`、`gross_amount`、`average_order_amount` |
+| `orders_imported` | One order | Customer, amount, status, event time, paid and refunded amounts, region, and other detail fields; 10 rows total 1400.00 |
+| `bi_order_metrics_l2` | One day | `order_date`, `order_count`, `gross_amount`, and `average_order_amount` |
 
-如果看板直接接明细表，每张图都要自己写一遍聚合逻辑；上游字段一改，看板就会悄悄算错。Level 2 做语义视图，就是为了给 BI 一个稳定的接口，所以要交付的是视图，不是明细表。
+If the dashboard reads the detail table directly, each chart must repeat the aggregation logic. An upstream field change can then alter dashboard calculations. The Level 2 semantic view provides a stable interface, so that view is the object to deliver for this dashboard.
 
-对象选定后，把交付内容写成消费者契约。每一项都对应一种常见的误用：
+Once the object is chosen, record a consumer contract. Each item prevents a common misuse:
 
-| 契约项 | `bi_order_metrics_l2` 示例 | 不写清楚会怎样 |
+| Contract item | Example for `bi_order_metrics_l2` | What can go wrong if it is missing? |
 | --- | --- | --- |
-| 对象 | `bi_order_metrics_l2` 视图 | BI 连到名字相近的其他表 |
-| 粒度 | 一行是一天 | BI 把每天的客单价再平均一次，结果和整体客单价对不上 |
-| 字段语义 | `gross_amount` 是模拟的税前订单金额，不是实收款 | 看板把它当成收入展示 |
-| 新鲜度 | 每批数据加工完成后更新 | 数据延迟被当成系统故障 |
-| 消费者和访问范围 | BI 看板，只读这一个视图 | 授权时顺手给了明细表 |
-| 责任人 | 数据产品负责人、BI 负责人和审批人 | 出了问题不知道找谁复核，下线时不知道找谁确认 |
-| 验收证据 | 行数、总额、日期覆盖和授权记录 | 发布结果无法复核 |
+| Object | The `bi_order_metrics_l2` view | BI connects to a different object with a similar name |
+| Grain | One row represents one day | BI averages daily average order amounts again, producing a different value from the overall average |
+| Field meanings | `gross_amount` is simulated pre-tax order value, not cash received | The dashboard labels it as revenue |
+| Freshness | Updated after each processing batch completes | A data delay is mistaken for a system failure |
+| Consumer and access scope | BI dashboard; read this view only | Detail-table access is granted along with the view |
+| Owners | Data product owner, BI owner, and approver | Nobody knows who should investigate a problem or approve retirement |
+| Acceptance evidence | Row counts, totals, date coverage, and grant records | Another person cannot verify the release |
 
-契约要先于授权：授权语句里的对象和范围，直接来自契约里的“对象”和“消费者和访问范围”两行。
+Write the contract before granting access. The object and scope in the grant statement come directly from the “Object” and “Consumer and access scope” rows.
 
-Lab 12 为了减少前置依赖，先用 Level 1 的 `orders_imported` 演示表级授权，再创建自己的 `course_bi_orders_view_l3`，把角色收窄为只读视图，并用普通用户验证底表不可读。它不要求先完成 Level 2；独立练习再把同一套流程用到 `bi_order_metrics_l2` 上。
+To reduce prerequisites, Lab 12 first demonstrates table-level authorization on Level 1's `orders_imported`. It then creates `course_bi_orders_view_l3`, narrows the role to that view, and verifies with an ordinary user that the base table is inaccessible. Level 2 is not required for the Lab; the independent exercise applies the same procedure to `bi_order_metrics_l2`.
 
-## 12.2 应该给多大的权限？
+## 12.2 How Much Access Should You Grant?
 
-### 为什么授给角色而不是用户？
+### Why grant privileges to a role?
 
-BI 团队有 5 个人要看这个看板。如果逐个给用户授权，就要执行 5 遍同样的授权；有人转岗时容易忘记收回；新人入职时也说不清该照着谁的权限开。
+Five people on the BI team need this dashboard. Direct grants to individual users require five copies of the same configuration. Staff changes make it easy to leave access behind, and new employees lack a clear role to request.
 
-Doris 内置授权分三层：**权限 → 角色 → 用户**。权限说明可以对哪个对象做什么；角色把一组权限命名并复用；用户通过持有角色获得权限。人员进出只需要调整用户持有的角色，所以角色是集中授权、撤销和审计的边界。Lab 12 先创建 `course_bi_reader_l3` 角色，随后短暂授给随机命名的测试用户，验证完就撤销并删除测试用户。
+Doris built-in authorization follows **privileges → roles → users**. A privilege describes an allowed operation on an object. A role names a reusable set of privileges. Users obtain those privileges through role membership. Staff changes can therefore be handled by changing membership, while the role provides a common scope for grants, revocation, and review.
 
-### 看板需要哪种权限？
+Lab 12 creates `course_bi_reader_l3`, briefly assigns it to a randomly named test user, and removes the user after testing.
 
-| 权限 | 能做什么 | BI 看板需要吗 |
+### Which privileges does a dashboard need?
+
+| Privilege | Capability | Needed by the BI dashboard? |
 | --- | --- | --- |
-| `SELECT_PRIV` | 读取指定范围内的数据 | 需要 |
-| `LOAD_PRIV`、`ALTER_PRIV`、`DROP_PRIV` | 写入或删除数据、修改表结构、删除对象 | 不需要，看板只读 |
-| `GRANT_PRIV` | 把权限授给别人，管理用户和角色 | 不需要，否则 BI 可以自行扩大授权、绕开审批 |
-| `ADMIN_PRIV` | 除节点操作外的管理员能力，包括读取和授权 | 不需要 |
-| `NODE_PRIV` | FE、BE 等节点的增删和管理 | 不需要 |
+| `SELECT_PRIV` | Read data within the granted scope | Yes |
+| `LOAD_PRIV`, `ALTER_PRIV`, `DROP_PRIV` | Write or delete data, change table structure, or delete objects | No; this dashboard is read-only |
+| `GRANT_PRIV` | Delegate privileges and manage users or roles | No; BI should not expand its own access |
+| `ADMIN_PRIV` | Administrative capabilities, including reading and granting access, but excluding node operations | No |
+| `NODE_PRIV` | Add, remove, and manage Frontend (FE) and Backend (BE) nodes | No |
 
-这些权限不能互相替代：`GRANT_PRIV` 本身不包含读取能力，`SELECT_PRIV` 也不能把权限转授给别人。`ADMIN_PRIV` 包含读取能力，但不包含 `NODE_PRIV`，不能为了查一张表就授予它。执行授权需要相应的 `GRANT_PRIV` 或管理员权限；在 Doris 4.x 中，委派授权者还必须拥有准备授出的对象权限，不能只凭 `GRANT_PRIV` 给任意表授予 `SELECT_PRIV`。课程使用 root，是为了在个人沙箱里演示授权过程，而不是生产环境的授权方案。
+These privileges have different responsibilities. `GRANT_PRIV` does not itself grant read access, and `SELECT_PRIV` does not permit delegation. `ADMIN_PRIV` includes read access but excludes `NODE_PRIV`; granting it to read one table gives the consumer far more capability than required.
 
-### 同样是 SELECT_PRIV，范围差多少？
+The grantor needs the appropriate `GRANT_PRIV` or administrative privilege. In Doris 4.x, a delegated grantor must also hold the object privilege being delegated; `GRANT_PRIV` alone does not permit granting `SELECT_PRIV` on an arbitrary table. The course uses root to make authorization experiments repeatable in a personal sandbox.
 
-即使只授予 `SELECT_PRIV`，`ON` 后面的范围也决定了风险有多大：
+### How much does the SELECT_PRIV scope matter?
 
-| 写法 | 覆盖范围 | 以后新建的对象 |
+Even when the privilege is only `SELECT_PRIV`, the scope after `ON` determines which objects become readable:
+
+| Grant scope | Coverage | Effect on future objects |
 | --- | --- | --- |
-| `*.*.*` | 所有 Catalog 中的所有库表 | 自动可读 |
-| `internal.*.*` | 内部 Catalog 中的所有库表 | 自动可读 |
-| `internal.<db>.*` | 一个数据库中的所有表和视图 | 该库中新建的表自动可读 |
-| `internal.<db>.<table>` | 一张表或一个视图 | 不受影响 |
-| `SELECT_PRIV(col1, col2) ON internal.<db>.<table>` | 一张表的指定列 | 以后新增的列不在授权范围内 |
+| `*.*.*` | All databases and tables in all Catalogs | New objects are automatically readable |
+| `internal.*.*` | All databases and tables in the internal Catalog | New internal objects are automatically readable |
+| `internal.<db>.*` | All tables and views in one database | New tables in that database are automatically readable |
+| `internal.<db>.<table>` | One table or view | Other new objects are unaffected |
+| `SELECT_PRIV(col1, col2) ON internal.<db>.<table>` | Named columns in one table | New columns are outside this grant |
 
-看板只需要一个对象，就只授予这一个对象。下面的语句由 Lab 12 执行，这里只阅读：
+If the dashboard needs one object, grant that object. Lab 12 executes the following form; read it here rather than running it alongside the Lab:
 
 <!-- reading-only-example -->
 ```sql
@@ -113,62 +117,70 @@ ON internal.dw_course_l1_demo.orders_imported
 TO ROLE 'course_bi_reader_l3';
 ```
 
-Lab 12 会先执行 `CREATE ROLE IF NOT EXISTS course_bi_reader_l3`，并用当前连接的 `lab.database` 生成对象名，所以你的环境里库名可能不同。课程用 root 授权只是为了让实验可以重复执行；生产环境应由经过审批的授权管理员执行，消费者使用独立账号，并配置主机范围和密钥管理。
+Lab 12 first runs `CREATE ROLE IF NOT EXISTS course_bi_reader_l3` and generates the object name from `lab.database`, so your database name may differ. In production, an approved authorization administrator should perform the change. Consumers need separate identities, appropriate host scopes, and managed credentials.
 
-语法和完整的权限列表见 [Doris 内置授权](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/internal/)、[GRANT TO](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/GRANT-TO) 和 [SHOW PRIVILEGES](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/SHOW-PRIVILEGES/)。
+See [Built-in Authorization](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/internal/), [GRANT TO](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/GRANT-TO), and [SHOW PRIVILEGES](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/SHOW-PRIVILEGES/) for syntax and privilege definitions.
 
-## 12.3 如何证明授权刚好够用？
+## 12.3 How Do You Prove the Grant Is Sufficient and Scoped?
 
-看板上线三个月后，审计来问：谁执行了变更？授予了什么？为什么授予？目标角色在变更前后有什么不同？只回答“SQL 执行成功了”，这些问题仍答不全。Lab 12 开始时会删除上次实验遗留的专用角色，所以它能展示的是**重置后的空白基线**，不是旧角色被删除前的历史状态；真实变更必须先保留原状态再操作。
+Three months after release, a reviewer asks: Who made the change? What was granted? Why? How did the role change? “The SQL succeeded” does not answer those questions.
 
-| 检查点 | Lab 12 中的 SQL | 回答什么问题 |
+Lab 12 deletes its dedicated role at startup, so it records a **baseline after reset**. It does not capture that role's earlier history. A real change must record the original configuration before modifying it.
+
+| Check | SQL or observation in Lab 12 | Question answered |
 | --- | --- | --- |
-| 身份 | `SELECT CURRENT_USER(), DATABASE()` | 谁在执行，连接在哪个数据库 |
-| 对象 | `SELECT COUNT(*), SUM(order_amount) FROM orders_imported` | 实验底表存在，而且是预期的 10 行、合计 1400.00 |
-| 执行者权限 | `SHOW GRANTS` | 当前连接用户拥有哪些权限；**不**显示目标角色变更前的授权 |
-| 角色基线 | 重置后 `SHOW ROLES` | 目标课程角色此时不存在；不代表历史上从未授权 |
-| 授权后 | 两次 `SHOW ROLES` | 先观察表级授权，再确认最终只保留视图权限 |
-| 普通用户 | 临时用户的视图、底表和撤销后查询 | 实际读取与拒绝结果是否符合最小权限设计 |
-| 业务值复核 | 再次查询行数和总额 | 授权没有改动数据产品本身 |
+| Identity | `SELECT CURRENT_USER(), DATABASE()` | Who is executing the change, and in which database? |
+| Object | `SELECT COUNT(*), SUM(order_amount) FROM orders_imported` | Does the base table contain the expected 10 rows totaling 1400.00? |
+| Grantor privileges | `SHOW GRANTS` | What privileges does the current user hold? This is not the target role's previous grant state |
+| Role baseline | `SHOW ROLES` after reset | Is the course role currently absent? This does not mean it was never granted privileges |
+| After grants | Two `SHOW ROLES` results | First observe table access, then confirm that only view access remains |
+| Ordinary user | View, base-table, and post-revocation queries | Does actual access match the least-privilege design? |
+| Business values | Repeat the count and total query | Did the authorization change leave the data product unchanged? |
 
-读第一次授权后的 `SHOW ROLES` 时，找到 `course_bi_reader_l3`：`TablePrivs` 应显示 `internal.<当前库>.orders_imported: Select_priv`。改授视图后，同一列应只显示 `course_bi_orders_view_l3: Select_priv`，不再包含底表。如果授权出现在 `GlobalPrivs`、`CatalogPrivs` 或 `DatabasePrivs` 列，范围就被放大了。第一次查看时 `Users` 为空；测试用户只在后面的验收步骤中短暂持有角色。
+After the first grant, locate `course_bi_reader_l3` in `SHOW ROLES`. Its `TablePrivs` should contain `internal.<current_db>.orders_imported: Select_priv`. After narrowing access, that column should contain only `course_bi_orders_view_l3: Select_priv`, with no base-table grant.
 
-每类证据只能回答一部分问题：
+A grant in `GlobalPrivs`, `CatalogPrivs`, or `DatabasePrivs` is broader than the intended object. Initially, `Users` is empty; the test user holds the role only during the later acceptance step.
 
-| 证据 | 能证明 | 不能证明 |
+Each kind of evidence answers part of the question:
+
+| Evidence | What it can establish | What it cannot establish |
 | --- | --- | --- |
-| `SHOW ROLES` | 角色拥有什么权限、范围多大 | 真实消费者能否登录并读到数据 |
-| 业务查询 | 对象存在，值符合预期 | 权限没有超出范围 |
-| Lab 中的变更说明 `SELECT` | 展示变更编号、角色、对象、权限和教学理由如何记录 | 经过审批或真的执行过；它只是示例声明，**不是 Doris 审计日志** |
-| FE 审计日志与审批记录 | 分别追查实际执行的 SQL 和审批依据 | 单独证明授权后的权限范围或消费者访问结果 |
-| 以测试消费者身份查询 | 这个身份实际能读什么、不能读什么 | 其他身份或其他主机的访问结果 |
+| `SHOW ROLES` | The role's privileges and their scopes | Whether a real consumer can log in and read the data |
+| Business query | The object exists and its values match expectations | That privileges are limited to the intended scope |
+| The Lab's change-record `SELECT` | An example record format: change ID, role, object, privilege, and teaching reason | Approval or execution of the grant; this is not a Doris audit log |
+| FE audit log and approval record | Executed SQL and the basis for approval, respectively | The resulting access scope or the consumer's actual query outcome on their own |
+| Query as a test consumer | What that identity can and cannot read | Access outcomes for other identities or hosts |
 
-最后一类证据最接近真实访问。Lab 12 会用临时普通用户亲自验证：只授予视图 `SELECT_PRIV` 时可以查询视图；直接查询底层明细表会被拒绝。撤销该用户的角色后，再查询视图也会被拒绝。这样既区分了 root 的管理能力与普通用户的读取能力，也避免把 `SHOW ROLES` 当成实际访问结果。
+Lab 12 checks actual access with a temporary ordinary user: view-only `SELECT_PRIV` allows the view query, direct access to the order details is denied, and revoking role membership denies the view query too. This distinguishes root's administrative capabilities from the consumer's privileges.
 
-在个人课程沙箱验收消费者权限时，Lab 12 创建临时测试用户、只给它目标角色，再**以该用户身份**连接（不用 root 代测）：
+The consumer test uses its own connection:
 
-| 测试 | 预期 | 说明 |
+| Test | Expected result | Meaning |
 | --- | --- | --- |
-| 查询实验发布的 `course_bi_orders_view_l3` 视图 | 成功 | 视图权限实际可用 |
-| 直接查询 `orders_imported` 明细表 | 被拒绝 | 没有顺带开放底表 |
-| 撤销角色后重试视图查询 | 被拒绝 | 撤销确实影响消费者，而非只改变管理员看到的列表 |
+| Query `course_bi_orders_view_l3` | Success | View access works |
+| Query `orders_imported` directly | Denied | The grant did not expose the base table |
+| Query the view after revoking membership | Denied | Revocation changes actual consumer access |
 
-Lab 12 的三项断言在隔离沙箱里真正执行；生产环境仍需要审批、独立身份管理和审计日志，不应复用实验账号配置。
+All three assertions execute in the isolated sandbox. Production still requires approval, managed identities, and audit retention.
 
-一份完整的发布记录应包含身份、对象、权限、原因和发布标识，并把权限证据、业务值证据与审批记录关联到同一个变更编号上。生产环境应按运维制度查看 FE 的 `fe.audit.log` 并留存审批单；Lab 的常量 `SELECT` 即使作为查询本身被审计，也只说明执行了这条 `SELECT`，不会把展示的“变更理由”变成真实审批记录，更不能证明 `GRANT` 已执行。[FE 日志管理](https://doris.apache.org/docs/4.x/admin-manual/log-management/fe-log/)说明了真实审计日志的位置和用途。
+A complete release record links identity, object, privilege, reason, and release ID under one change identifier. Follow the production operating procedure for the FE's `fe.audit.log` and approval records. Auditing the Lab's constant `SELECT` proves that this `SELECT` ran; it does not turn the displayed reason into an approval or prove that `GRANT` ran. [FE Log Management](https://doris.apache.org/docs/4.x/admin-manual/log-management/fe-log/) describes the audit log's location and purpose.
 
-## 12.4 看板下线后如何收回权限？
+## 12.4 How Do You Retire Dashboard Access?
 
-半年后看板下线。如果没人主动收回，旧账号可能继续通过 `course_bi_reader_l3` 读取数据。先看 `SHOW ROLES` 的 `Users` 列，再决定收回的是**某个账号的角色成员关系**，还是**整个角色的视图权限**；这两种 `REVOKE` 的影响范围不同。
+When a dashboard is retired, its account may continue reading through `course_bi_reader_l3`. Inspect the role's `Users` first. Decide whether to remove **one user's role membership** or **the role's view privilege**. These operations affect different sets of consumers.
 
-如果只有旧看板下线，而新看板仍通过同一角色读取该视图，就只从旧看板账号撤销角色，保留角色上的 `SELECT_PRIV`，并分别用两个账号验证“旧账号不能读、新账号仍能读”。还要检查旧账号是否通过其他角色或直接授权拥有读取权限；只撤销这一条角色成员关系不能自动清除其他访问路径。下面是一个仅供阅读的示意语句，Lab 12 不使用这个账号：
+If dashboard A is retired but dashboard B still uses the same role, revoke membership only from A's account. Keep the role's `SELECT_PRIV`, then verify that A is denied and B can still read. Check for direct grants or other roles that could still give A access; removing one membership does not remove every access path.
+
+The following is a reading-only example. Lab 12 does not use this account:
 
 <!-- reading-only-example -->
 ```sql
 REVOKE 'course_bi_reader_l3' FROM 'dashboard_a'@'%';
 ```
 
-只有确认整个角色不再服务任何消费者时，才进入**角色退役**：先记录使用者和变更前授权，撤销或迁移所有成员；然后显式收回该角色上的视图权限，删除角色，最后复核 `SHOW ROLES` 和普通账号的访问结果。下面两句由 Lab 12 在撤销临时用户的角色并删除该用户之后执行，这里只阅读：
+Retire the role itself only after confirming that no consumer still needs it. Record its users and grants, remove or migrate all memberships, revoke the role's view privilege, delete the role, and verify both configuration and ordinary-user access.
+
+Lab 12 executes the next two statements after revoking membership and deleting its test user:
 
 <!-- reading-only-example -->
 ```sql
@@ -179,67 +191,69 @@ FROM ROLE 'course_bi_reader_l3';
 DROP ROLE IF EXISTS course_bi_reader_l3;
 ```
 
-不要在其他消费者仍依赖角色时撤销角色上的权限，更不能把“还在使用”当成执行角色级 `REVOKE` 后就停下来的理由。Lab 12 是单用户隔离实验：先验证访问，再把角色从测试用户撤下并删除测试用户，最后才撤销角色的视图权限、删除角色和实验视图。
+Revoking a shared role's privileges interrupts every consumer relying on those privileges. Confirm dependencies before that step. Lab 12 has only one temporary consumer: it tests access, removes that user's membership and account, then revokes the view grant and removes the role and Lab view.
 
-撤销只改变访问，不改变数据产品：
+Revocation changes access:
 
-- 测试用户失去角色后查询 `course_bi_orders_view_l3` 会被拒绝；它此前也没有底表 `orders_imported` 的读取权限；
-- `orders_imported` 仍然是 10 行、合计 1400.00，粒度和字段都不变；
-- 通过其他角色获得权限的用户不受影响。
+- The test user can no longer query `course_bi_orders_view_l3`; it never had direct access to `orders_imported`.
+- `orders_imported` still contains 10 rows totaling 1400.00, with the same grain and fields.
+- Users obtaining access through other roles keep those independent access paths.
 
-生产环境还要保留审批和撤销的记录。`DROP ROLE` 删除的是角色本身，不能代替审计记录；撤销前后两次 `SHOW ROLES` 是配置变更证据，普通账号的正反查询才是访问结果证据。语法和权限要求见 [REVOKE FROM](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/REVOKE-FROM) 和 [DROP ROLE](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/DROP-ROLE/)。
+Retain approval and revocation records in production. `DROP ROLE` removes an object; it does not replace an audit record. Before-and-after `SHOW ROLES` results describe configuration changes, while ordinary-user queries describe their effects. See [REVOKE FROM](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/REVOKE-FROM) and [DROP ROLE](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/DROP-ROLE/).
 
-## 12.5 表级权限不够细怎么办？
+## 12.5 What If Table Privileges Are Too Broad?
 
-看板上线后又来了两个需求：订单明细里的 `paid_amount` 和 `refund_amount` 只允许财务查看；东区团队只能看到 `region = 'EAST'` 的订单。表级 `SELECT_PRIV` 只能整张表授予或不授予，这两个需求都表达不了：
+Two new requirements arrive: only Finance may see `paid_amount` and `refund_amount`, and the eastern regional team may read only orders with `region = 'EAST'`. Table-level `SELECT_PRIV` cannot express either restriction.
 
-| 需求 | 可以考虑的机制 | 注意什么 |
+| Requirement | Mechanism to consider | What to verify |
 | --- | --- | --- |
-| 部分列只给特定角色 | 列权限，如 `SELECT_PRIV(order_id, order_amount)` | 表新增列时要重新评审授权范围 |
-| 按条件只看部分行 | Row Policy，可以绑定到用户或角色 | 过滤条件要用真实消费者身份验证 |
-| 敏感字段只显示部分内容 | 数据脱敏 | Doris 当前通过 Apache Ranger 配置脱敏策略；本 Lab 未安装 Ranger |
+| Selected columns for particular roles | Column privileges, such as `SELECT_PRIV(order_id, order_amount)` | Review the grant when new columns are added |
+| Selected rows based on a condition | Row Policy, associated with a user or role | Test the filter with the intended consumer identity |
+| Hide part of a sensitive field | Data masking | Doris uses Apache Ranger for masking policies; this Lab does not install Ranger |
 
-不管选哪种机制，都要用真实的普通消费者身份验证效果；root 或管理员执行成功，不能说明普通用户已经被隔离。先写清楚要防什么、涉及哪些对象、怎样验收，再选择具体实现。各机制的边界见 [Data Access Control](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/data/)。
+Test each mechanism with an ordinary consumer. A successful root query does not establish the consumer's access boundary. Define the restriction, affected objects, and acceptance checks before choosing a mechanism. See [Data Access Control](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/data/).
 
-## 动手实验：受控发布一个 BI 读者角色
+## Hands-on Lab: Publish a Scoped BI Reader Role
 
-打开 [Lab 12](lab12_publishing_permissions_audit.ipynb)，按顺序完成：
+Open [Lab 12](lab12_publishing_permissions_audit.ipynb) and complete these steps:
 
-1. 检查当前用户、数据库、执行者权限和重置后的角色基线；
-2. 创建课程专用的 `course_bi_reader_l3` 角色；
-3. 先观察表级授权，再改授当前课程库的实验视图，确认角色不再能直接读底表；
-4. 用临时普通用户验证“视图可读、明细不可读、撤销后视图不可读”；
-5. 输出角色权限与变更说明示例，并清理测试用户、角色和实验视图。
+1. Check identity, database, grantor privileges, and the role baseline after reset.
+2. Create `course_bi_reader_l3`.
+3. Observe a table grant, then narrow the role to the course view.
+4. As a temporary ordinary user, verify that the view is readable, the base table is denied, and the view is denied after membership is revoked.
+5. Record the role configuration and example change record; clean up the test user, role, and Lab view.
 
-### 前置条件和安全说明
+### Prerequisites and Scope
 
-Lab 12 只需要 Level 1 Lab 5 加载的 `orders_imported`；Level 2 的服务视图只在独立练习中使用。Notebook 会在变更前检查这张表是否存在。实验只使用专用的 `dw_course_l1_*` 数据库；临时用户随机命名、密码只留在内存中且不输出，验证后立即删除。`'%'` 主机范围只为个人课程容器连通性服务，不是生产授权方案，也不向共享生产对象授权。
+Lab 12 needs only `orders_imported` from Level 1 Lab 5. The Level 2 serving view appears in the independent exercise. The Notebook checks the table before changing grants.
 
-### 完成标准
+Use the dedicated `dw_course_l1_*` database. The test account has a random name; its password stays in memory and is never printed. The account is removed after testing. Its `'%'` host scope supports connectivity inside the personal course container and is not a production account design.
 
-| 检查 | 预期 |
+### Acceptance Criteria
+
+| Check | Expected result |
 | --- | --- |
-| 前置数据 | `orders_imported` 为 10 行、合计 1400.00 |
-| 发布前身份 | 显示当前课程用户和专用数据库 |
-| 授权范围 | 第一阶段 `TablePrivs` 只有当前库的 `orders_imported`；第二阶段只有 `course_bi_orders_view_l3`，不是全局或整库 |
-| 授权类型 | `Select_priv`，没有 `Admin_priv` 或 `Grant_priv` |
-| 普通用户验收 | 视图查询成功、底表查询被拒绝、撤销角色后视图查询被拒绝 |
-| 变更说明示例 | 变更编号、角色、对象、权限和教学理由齐全，但不当作审批或系统审计日志 |
-| 清理后 | `SHOW ROLES` 中不再出现 `course_bi_reader_l3` |
+| Prerequisite data | 10 `orders_imported` rows totaling 1400.00 |
+| Release identity | Current course user and dedicated database displayed |
+| Grant scope | First, only the current database's `orders_imported` in `TablePrivs`; then, only `course_bi_orders_view_l3` |
+| Privilege type | `Select_priv`, without `Admin_priv` or `Grant_priv` |
+| Ordinary-user checks | View succeeds; base table is denied; view is denied after membership revocation |
+| Example change record | Change ID, role, object, privilege, and teaching reason, identified as an example rather than approval or audit evidence |
+| Cleanup | `course_bi_reader_l3` no longer appears in `SHOW ROLES` |
 
-## 独立练习
+## Independent Exercise
 
-假设 BI 团队还需要读取 Level 2 的 `bi_order_metrics_l2`，但不能读取订单明细。请写出：
+The BI team needs Level 2's `bi_order_metrics_l2`, but must not read order details. Write down:
 
-1. 角色需要的最小对象范围；
-2. 应检查的两个权限证据；
-3. 发布失败时的撤销步骤；
-4. 为什么不能直接授予 `SELECT_PRIV ON internal.*.*`。
+1. The role's minimum object scope.
+2. Two pieces of privilege evidence to retain.
+3. The rollback steps if publication fails.
+4. Why `SELECT_PRIV ON internal.*.*` exceeds the requirement.
 
 <details>
-<summary>参考解释</summary>
+<summary>Reference Explanation</summary>
 
-最小范围是只授予这个视图的 `SELECT_PRIV`。下面的语句只用于阅读，Lab 12 不会执行：
+Grant `SELECT_PRIV` on this view only. The following is a reading-only example:
 
 <!-- reading-only-example -->
 ```sql
@@ -248,35 +262,36 @@ ON internal.dw_course_l1_demo.bi_order_metrics_l2
 TO ROLE 'course_bi_reader_l3';
 ```
 
-不需要给它依赖的 `daily_order_metrics_l2` 或 `orders_imported` 授权。只拿到视图权限的角色可以查询视图；如果把明细表也授给它，它就能绕开视图直接读取订单明细。
+Do not grant its dependencies, `daily_order_metrics_l2` or `orders_imported`. A view-only role can query the view; granting the detail table too would allow the consumer to bypass that interface.
 
-权限证据至少留两份：`SHOW GRANTS` 确认执行者的权限，变更前后的 `SHOW ROLES` 对照目标角色的状态；授权后应确认 `TablePrivs` 中只有这个视图。`SHOW GRANTS` 不显示目标角色的历史权限。在隔离环境中实际发布时，还应以测试消费者身份验证“视图可读、明细不可读”。
+Retain `SHOW GRANTS` for the grantor and before-and-after `SHOW ROLES` for the target role. After the grant, confirm that `TablePrivs` contains only the view. `SHOW GRANTS` does not describe the role's previous state. In an isolated environment, also test that the consumer can read the view but not the details.
 
-发布失败时，先确认角色的成员和其他消费者。若只有这次发布的账号应退出，先从该账号撤销角色并以普通身份验收，不动仍被他人依赖的角色权限；只有角色无人再用时，才撤销角色上的授权、执行 `DROP ROLE`，并用 `SHOW ROLES` 与账号访问结果复核。
+For rollback, inspect memberships and other consumers first. If only the newly published account should lose access, revoke its membership and verify access as that user. Keep shared role privileges while other consumers need them. Once the role has no remaining purpose, revoke its privileges, drop it, and verify the resulting configuration and access.
 
-`internal.*.*` 会覆盖内部 Catalog 中现有和以后新建的所有库表，其中就包括订单明细。它远远超出契约承诺的访问范围，一旦误授，影响面也最大。
+`internal.*.*` covers every existing and future database and table in the internal Catalog, including order details. That scope exceeds the contract and increases the impact of an incorrect grant.
 
 </details>
 
-## 单元总结
+## Module Summary
 
-- 授权之前先写消费者契约：对象、粒度、字段语义、新鲜度、访问范围和责任人；
-- 权限授给专用角色而不是直接授给用户，数据访问权限 `SELECT_PRIV` 要和 `GRANT_PRIV`、`ADMIN_PRIV` 等管理权限分开；
-- 授权范围收窄到契约里的对象，不共享 root，也不授予 `*.*.*` 或 `internal.*.*`；
-- `SHOW GRANTS`、`SHOW ROLES`、业务查询、变更说明和真实审计日志各自回答不同的问题；root 在沙箱中执行成功不等于消费者权限设计正确；
-- 下线单个消费者先撤销其角色成员关系；整角色退役才撤销角色权限并删除角色，均需核对影响范围和普通账号的访问结果；
-- 表级权限不够细时，考虑列权限、Row Policy 或脱敏，并用真实的普通消费者身份验证。
+- Define the consumer contract before choosing privilege scope.
+- Roles centralize grants, revocation, and review; read privileges and administrative privileges serve different purposes.
+- `SHOW GRANTS`, `SHOW ROLES`, business queries, ordinary-user tests, and audit logs provide different evidence.
+- Revoke one user's membership when only that consumer leaves; revoke the role's privileges when the entire role is retired.
+- Column privileges, a Row Policy, and masking address different restrictions.
+- A release procedure includes revocation and cleanup as well as grants.
 
-## 知识测验
+## Knowledge Quiz
 
-[Quiz 12](quiz12_publishing_permissions_audit.ipynb) 包含 6 道情境题，检查消费者契约、最小权限、数据权限与管理权限的区别、发布证据、撤销边界以及行级权限。
+[Quiz 12](quiz12_publishing_permissions_audit.ipynb) contains six scenario-based single-choice questions covering consumer contracts, privilege scope, evidence, shared-role revocation, and fine-grained access.
 
-## 官方参考资料
+## Official References
 
 - [Built-in Authorization](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/internal/)
+- [Data Access Control](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/data/)
 - [GRANT TO](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/GRANT-TO)
 - [REVOKE FROM](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/REVOKE-FROM)
-- [SHOW GRANTS](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/SHOW-GRANTS)
+- [DROP ROLE](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/DROP-ROLE/)
+- [SHOW GRANTS](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/SHOW-GRANTS/)
 - [SHOW ROLES](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/account-management/SHOW-ROLES/)
-- [FE 日志管理](https://doris.apache.org/docs/4.x/admin-manual/log-management/fe-log/)
-- [Data Access Control](https://doris.apache.org/docs/4.x/admin-manual/auth/authorization/data/)
+- [FE Log Management](https://doris.apache.org/docs/4.x/admin-manual/log-management/fe-log/)

@@ -58,9 +58,9 @@ class Level3MaterialsTest(unittest.TestCase):
     def test_quizzes_explain_every_option_and_track_reading_goals(self):
         for module in self.modules:
             guide = (LEVEL3 / module / "course.md").read_text()
-            goals = guide.split("### 学习目标\n", 1)[1].split("\n## ", 1)[0]
+            goals = guide.split("### Learning Objectives\n", 1)[1].split("\n## ", 1)[0]
             objectives = {
-                re.sub(r"[；。]$", "", goal.replace("`", ""))
+                re.sub(r"[.;]$", "", goal.replace("`", ""))
                 for goal in re.findall(r"^\d+\. (.+)$", goals, re.MULTILINE)
             }
             quiz = next((LEVEL3 / module).glob("quiz*.yaml"))
@@ -76,7 +76,7 @@ class Level3MaterialsTest(unittest.TestCase):
                     for option in question["options"]:
                         self.assertTrue(option["text"].startswith(f"{option['id'].upper()}. "))
                         self.assertIn(f"{option['id'].upper()}: ", question["explanation"])
-                    self.assertIn(f"{question['answer'].upper()}: 正确。", question["explanation"])
+                    self.assertIn(f"{question['answer'].upper()}: Correct.", question["explanation"])
 
     def test_new_notebooks_are_source_only_and_valid(self):
         notebooks = sorted(LEVEL3.glob("module*/*.ipynb"))
@@ -94,14 +94,14 @@ class Level3MaterialsTest(unittest.TestCase):
 
     def test_guides_follow_the_level1_learning_structure(self):
         required_sections = (
-            "课程信息",
-            "单元目标",
-            "学习目标",
-            "单元安排",
-            "动手实验",
-            "单元总结",
-            "知识测验",
-            "官方参考资料",
+            "Course Information",
+            "Module Goal",
+            "Learning Objectives",
+            "Module Schedule",
+            "Hands-on Lab",
+            "Module Summary",
+            "Knowledge Quiz",
+            "Official References",
         )
         for module in self.modules:
             guide = (LEVEL3 / module / "course.md").read_text()
@@ -110,7 +110,7 @@ class Level3MaterialsTest(unittest.TestCase):
             self.assertGreaterEqual(len(guide), 4000, module)
 
     def test_labs_explain_verify_and_clean_up_the_work(self):
-        required_markdown = ("你将完成什么", "前置条件", "独立练习", "参考解释", "实验回顾")
+        required_markdown = ("What You Will Do", "Prerequisites", "Independent Exercise", "Reference Explanation", "Lab Review")
         for path in sorted(LEVEL3.glob("module*/lab*.ipynb")):
             notebook = nbformat.read(path, as_version=4)
             nbformat.validate(notebook)
@@ -131,9 +131,9 @@ class Level3MaterialsTest(unittest.TestCase):
         for path in sorted(LEVEL3.glob("module*/lab*.ipynb")):
             notebook = nbformat.read(path, as_version=4)
             sources = [cell.source for cell in notebook.cells]
-            prompt = next(i for i, source in enumerate(sources) if source.startswith("## 独立练习"))
+            prompt = next(i for i, source in enumerate(sources) if source.startswith("## Independent Exercise"))
             answer = next(i for i, source in enumerate(sources) if "# TODO:" in source)
-            reference = next(i for i, source in enumerate(sources) if source.startswith("<details>\n<summary>参考解释"))
+            reference = next(i for i, source in enumerate(sources) if source.startswith("<details>\n<summary>Reference Explanation"))
             self.assertLess(prompt, answer, path)
             self.assertLess(answer, reference, path)
 

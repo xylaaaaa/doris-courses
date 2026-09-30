@@ -1,87 +1,135 @@
-title: '模块 12：发布、权限与审计'
-description: 共 6 道情境单选题，不需要连接数据库。提交后查看每个选项的解析。
+title: 'Module 12: Publishing, Permissions, and Audit'
+description: Six scenario-based single-choice questions. No database connection is required. Submit each
+  answer to read feedback on every option.
 questions:
 - id: q1
-  objective: 为数据产品写出对象、粒度、字段语义、新鲜度、访问范围和责任人的消费者契约
-  prompt: 财务看板下周交给新团队维护。发布单只写了视图名和字段类型，尚未说明按哪个时区统计一天、金额代表什么、最晚何时更新、谁可访问以及谁处理异常。发布前应补什么？
+  objective: Write a consumer contract covering the object, grain, field meanings, freshness, access scope,
+    and owners
+  prompt: A finance dashboard is being handed to a new team next week. Its release record names the view
+    and column types, but omits the timezone for a reporting day, what the amount means, the update deadline,
+    who may read it, and who handles exceptions. What should be added before release?
   options:
   - id: a
-    text: A. 只补视图的建表语句；接手人可以从字段类型推断时间、金额和授权范围
+    text: A. Only the view definition; the new team can infer time, amount, and access scope from column
+      types
   - id: b
-    text: B. 只补允许访问的账号名单；粒度和新鲜度可等看板出错后再约定
+    text: B. Only a list of allowed accounts; grain and freshness can be agreed after a dashboard problem
   - id: c
-    text: C. 补齐对象、日粒度与时区、金额语义、更新截止时间、授权范围和责任人
+    text: C. The object, daily grain and timezone, amount meaning, update deadline, access scope, and
+      owners
   - id: d
-    text: D. 只补刷新时间和联系人；既然字段类型已知，访问范围和金额含义就不必写进契约
+    text: D. Only the refresh schedule and contact; known column types make access scope and amount meaning
+      unnecessary
   answer: c
-  explanation: "A: 建表语句和字段类型不能说明业务时区、金额含义、可访问身份或负责人。B: 账号范围重要，但漏掉粒度和新鲜度仍会让新团队误读结果。C: 正确。消费者契约要同时说明数据对象、粒度与时间、字段语义、新鲜度、访问边界和责任人，交接后才能复核。D: 刷新与责任人只是其中两项；授权范围和金额语义不能由字段类型自动推出。"
+  explanation: 'A: A definition and column types do not establish business timezone, amount meaning, allowed
+    identities, or ownership. B: Account scope matters, but missing grain and freshness can still lead
+    to misinterpretation. C: Correct. A consumer contract connects the object, grain and time, field meanings,
+    freshness, access boundaries, and owners so the receiving team can verify the delivery. D: Refresh
+    timing and ownership cover only part of the contract; types do not imply amount meaning or access
+    scope.'
 - id: q2
-  objective: 区分用户、角色、权限和对象范围，并区分数据访问权限与 GRANT_PRIV、ADMIN_PRIV 等管理权限
-  prompt: 公司规定看板访问变更须由授权管理员审批，团队现有 5 人且将持续增员。商业智能（BI）负责人希望自己给新人开权限，省去审批。怎样在遵守审批要求的同时减少逐人维护成本？
+  objective: Distinguish users, roles, privileges, and object scopes, including data access and administrative
+    privileges
+  prompt: Company policy requires an authorization administrator to approve dashboard-access changes.
+    The business intelligence (BI) team has five members and will keep growing. Its owner wants to grant
+    newcomers access without approval. Which approach follows the policy while reducing repeated per-user
+    configuration?
   options:
   - id: a
-    text: A. 给负责人授予 GRANT_PRIV，由他自行给新人开通权限
+    text: A. Grant the owner GRANT_PRIV so they can authorize newcomers independently
   - id: b
-    text: B. 给负责人授予 ADMIN_PRIV，以后遇到权限问题他都能自己处理
+    text: B. Grant the owner ADMIN_PRIV so they can resolve every access problem themselves
   - id: c
-    text: C. 创建专用角色，只授予看板视图的 SELECT_PRIV，再把角色授给团队成员；人员变动由授权管理员调整谁持有角色
+    text: C. Create a dedicated role with SELECT_PRIV on the dashboard view; the administrator changes
+      approved role memberships
   - id: d
-    text: D. 不建角色，给 5 位成员逐个授予视图的 SELECT_PRIV，谁离开就收回谁的
+    text: D. Skip roles and grant view SELECT_PRIV to each of the five users separately, revoking each
+      grant when they leave
   answer: c
-  explanation: "A: GRANT_PRIV 是管理权限，持有者可以把权限继续授给别人，谁能看看板就不再经过要求的审批；它本身也不包含读取能力。B: ADMIN_PRIV 是集群管理权限，本身就能通过读取检查，也能删表、改权限；为了看一个视图授予它，风险远超需要。C: 正确。数据访问权限 SELECT_PRIV 和管理权限分开授予；角色集中定义授权边界，审批后只需调整谁持有角色。D: 逐个授权虽然仍可由管理员审批，但要重复维护同样的权限，转岗时容易漏收。"
+  explanation: 'A: Delegation capability would allow access changes outside the required approval process;
+    GRANT_PRIV does not itself supply read access. B: ADMIN_PRIV provides broad administrative capabilities,
+    including reading and changing privileges, far beyond one-view access. C: Correct. Keep reading privileges
+    separate from administration, define scope once in a role, and change membership after approval. D:
+    Direct grants can follow approval policy, but duplicate the same configuration and increase the chance
+    of incomplete revocation.'
 - id: q3
-  objective: 通过专用角色只授予消费者需要的对象权限，而不是共享 root 或授予全局权限
-  prompt: 看板只读语义视图 bi_order_metrics_l2，不能读订单明细；同一数据库还有其他团队的表。给看板角色设计授权范围时，哪项符合这个需求？
+  objective: Grant only the required object privileges through a dedicated role
+  prompt: A dashboard must read only the semantic view bi_order_metrics_l2, with no direct access to order
+    details. The same database also contains other teams' tables. Which grant scope meets that requirement?
   options:
   - id: a
-    text: A. internal.dw_course_l1_demo.bi_order_metrics_l2，只授予这一个视图
+    text: A. internal.dw_course_l1_demo.bi_order_metrics_l2, granting only this view
   - id: b
-    text: B. *.*.*，以后新增的看板对象也不用再申请
+    text: B. *.*.*, so future dashboard objects do not require another request
   - id: c
-    text: C. internal.dw_course_l1_demo.*，一次覆盖这个库里的所有对象
+    text: C. internal.dw_course_l1_demo.*, covering the entire database
   - id: d
-    text: D. 视图加上它依赖的 daily_order_metrics_l2 和 orders_imported，否则视图查不出数据
+    text: D. The view plus daily_order_metrics_l2 and orders_imported, because the view requires its base
+      tables to be granted too
   answer: a
-  explanation: "A: 正确。契约里的对象就是这一个视图，授权范围收窄到这一个对象；只拿到视图权限的角色就可以查询视图。B: *.*.* 覆盖所有 Catalog 中的所有库表，以后新建的表也自动可读，远远超出契约范围。C: 整库授权会让同库的 orders_imported 明细可读，这个库以后新建的表也会自动可读。D: 查询视图不需要底层表的权限；把明细表也授给角色，它就能绕开视图直接读取订单明细。"
+  explanation: 'A: Correct. Grant SELECT_PRIV on the contract''s view only; a view-only role can query
+    it. B: The global scope includes all Catalogs and future objects. C: A database-wide grant exposes
+    order details and future tables in that database. D: Querying the view does not require direct base-table
+    privileges; those extra grants would let the consumer bypass the interface.'
 - id: q4
-  objective: 用 SHOW GRANTS、SHOW ROLES 和变更说明保留发布证据，并区分它们与真实审计日志
-  prompt: "发布后，角色清单显示 reader 仅能读取 sales_view。一个临时普通账号持有该角色：查视图成功、查底表被拒绝；审批系统却找不到这次变更。现有证据能支持哪个结论？"
+  objective: Retain release evidence using SHOW GRANTS, SHOW ROLES, and a change record, and distinguish
+    it from audit logs
+  prompt: After release, the role listing shows that reader can select only sales_view. A temporary ordinary
+    account holding the role successfully queries the view and is denied direct access to its base table.
+    The approval system has no record of the change. Which conclusion does this evidence support?
   options:
   - id: a
-    text: A. 所有 BI 同事在所有主机上的访问结果都已经验证
+    text: A. Every BI user's access has been verified from every host
   - id: b
-    text: B. 授权已经经过审批，因为角色清单能显示当前权限
+    text: B. The change was approved because the role listing shows current privileges
   - id: c
-    text: C. sales_view 的行数和金额已经与业务源核对一致
+    text: C. The view's row count and amount have been reconciled with the business source
   - id: d
-    text: D. 已验证角色范围和这个测试账号的访问边界，但还不能声称审批已完成
+    text: D. The role scope and this test account's access boundary have been checked, but approval has
+      not been established
   answer: d
-  explanation: "A: 只验证了一个临时账号，不能外推到其他身份和主机。B: 角色清单是当前配置证据，缺少审批记录就不能证明这次变更经过审批。C: 权限和访问测试不包含业务值核对。D: 正确。角色清单说明授权对象范围，普通账号的正反查询说明该身份的实际访问边界；审批仍须单独留证。"
+  explanation: 'A: One account''s test does not establish outcomes for other identities or hosts. B: Current
+    configuration does not prove approval. C: Access tests do not reconcile business values. D: Correct.
+    The role listing describes scope and the ordinary account''s positive and negative queries describe
+    its access; approval still needs separate evidence.'
 - id: q5
-  objective: 区分撤销用户的角色与撤销角色上的权限，按影响范围下线访问并复核结果
-  prompt: 旧看板下线，其账号持有 course_bi_reader_l3；另一团队的新看板账号也持有该角色，而且仍须读取同一个视图。两个账号都没有其他途径读取该视图。怎样只收回旧看板的访问？
+  objective: Distinguish revoking role membership from revoking a role's privileges, and verify the effect
+    of each
+  prompt: An old dashboard is retiring. Its account and another team's active dashboard account both hold
+    course_bi_reader_l3 and need the same view. Neither has another access path. How can only the retiring
+    dashboard lose access?
   options:
   - id: a
-    text: A. 直接 DROP ROLE；新看板已经读过视图，删除角色不会影响后续访问
+    text: A. Drop the role; the active dashboard has already read the view, so future access is unaffected
   - id: b
-    text: B. 只从旧看板账号撤销该角色，以两个账号分别复核访问；新看板仍需读取时保留角色和它的视图权限
+    text: B. Revoke the role only from the retiring account and test both accounts; retain the role and
+      its view grant while the active dashboard needs them
   - id: c
-    text: C. 从角色撤销视图的 SELECT_PRIV；这只影响旧看板，不影响仍在使用角色的新看板
+    text: C. Revoke the view's SELECT_PRIV from the role; this affects only the retiring dashboard
   - id: d
-    text: D. 保留角色授权，只在旧看板的配置中删除视图名称；账号直接查询视图也会被拒绝
+    text: D. Keep the grant but remove the view name from the old dashboard configuration; direct database
+      queries will then be denied
   answer: b
-  explanation: "A: 删除共享角色会影响新看板从该角色获得的权限，不能因为它已读过视图就假定后续访问不受影响。B: 正确。撤销旧看板账号的角色成员关系只收回它经该角色获得的访问；分别以两个账号验证旧看板账号被拒绝、新看板账号仍可读取。C: 撤销角色上的视图权限会影响每一个持有者，新看板也会失去通过它获得的访问。D: 看板配置不是数据库授权边界；只删配置不妨碍账号直接查询。"
+  explanation: 'A: Removing a shared role affects privileges relied on by its active consumers. B: Correct.
+    Remove only the departing account''s membership, then verify that it is denied while the active account
+    still succeeds. C: Revoking the role''s privilege affects all members. D: Dashboard configuration
+    is not a database authorization boundary; the account could still query directly.'
 - id: q6
-  objective: 判断什么时候表级权限不够，需要列权限、Row Policy 或脱敏
-  prompt: 一名普通分析账号已有订单表的读取权限。合规要求无论它怎样查询，都只能看到自己负责区域的订单；可见订单的所有字段仍可读取。哪种机制最贴近这个限制？
+  objective: Decide when table privileges need column privileges, a Row Policy, or data masking
+  prompt: An ordinary analyst account can read the order table. Compliance requires every database query
+    by that account to show only orders for its assigned region; all columns of those visible orders may
+    remain readable. Which mechanism matches the restriction?
   options:
   - id: a
-    text: A. 用 Row Policy 按区域限制这个账号能看到的行，并以普通账号验证
+    text: A. Apply a region-based Row Policy and verify it using the ordinary account
   - id: b
-    text: B. 只撤销 region 列的读取权限，其他区域的订单就会自动消失
+    text: B. Revoke access only to the region column so other regions' rows disappear automatically
   - id: c
-    text: C. 对 region 字段做脱敏，其他区域的订单就不会返回
+    text: C. Mask the region value so other regions' rows are no longer returned
   - id: d
-    text: D. 只在看板里加区域过滤；该账号直接查询底表也会被同一过滤器约束
+    text: D. Add a region filter only to the dashboard; it will also constrain direct base-table queries
   answer: a
-  explanation: "A: 正确。Row Policy 按行施加区域谓词，且应使用会受策略约束的普通账号验证。B: 列权限控制能读取哪些列，不会自动过滤其他区域的行。C: 脱敏改变字段显示，不会删除不该看的订单行。D: 看板过滤只约束该看板，不能保护账号直接执行的数据库查询。"
+  explanation: 'A: Correct. A Row Policy restricts rows with a predicate; test it as the intended ordinary
+    consumer. B: Column privileges choose readable columns, not allowed rows. C: Masking changes field
+    presentation rather than removing disallowed rows. D: A dashboard filter controls that dashboard''s
+    queries, not every query issued by the account.'

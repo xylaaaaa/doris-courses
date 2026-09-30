@@ -1,87 +1,128 @@
-title: '模块 13：存储与生命周期管理'
-description: 共 6 道情境单选题，不需要连接数据库。提交后查看每个选项的解析。
+title: 'Module 13: Storage and Lifecycle Management'
+description: Six scenario-based single-choice questions. No database connection is required. Submit each
+  answer to read feedback on every option.
 questions:
 - id: q1
-  objective: 根据保留策略和查询时间语义选择分区边界
-  prompt: 订单明细表保留当月及之前 12 个自然月，按订单日期判断是否过期；报表按 order_date 过滤；每个导入批次里都混有几天前补录的订单。分区应该怎样设计？
+  objective: Choose partition boundaries that match retention rules and query time semantics
+  prompt: A Duplicate Key order-detail table retains the current calendar month and the preceding 12 months.
+    Expiry is based on order date, reports filter order_date, and ingestion batches include late-arriving
+    orders from earlier days. Which partition design aligns cleanup and reporting?
   options:
   - id: a
-    text: A. 按导入日期按月分区，每个导入批次都能完整落进同一个分区
+    text: A. Monthly partitions by ingestion date, keeping every ingestion batch in one partition
   - id: b
-    text: B. 按 order_date 按年分区，分区数量少，便于管理
+    text: B. Yearly partitions by order_date to reduce the number of definitions
   - id: c
-    text: C. 不分区，只按 order_id 分桶，过期数据用条件 DELETE 清理
+    text: C. No partitions; distribute by order_id and remove expired rows with conditional DELETE
   - id: d
-    text: D. 按 order_date 按月分区，与过期判断和查询过滤使用同一个时间
+    text: D. Monthly partitions by order_date, using the same time for expiry and query filters
   answer: d
-  explanation: "A: 1 月的订单如果在 2 月才补录，就会落进 2 月分区：清理 1 月时会漏掉它，按 order_date 查询时也用不上分区裁剪。B: 清理一个月只能对整年分区执行条件 DELETE，删除条件记在整个年度分区上，查询其他月份时也要过滤它。C: 删除条件作用于整张表，所有查询都要过滤它，直到 Compaction 才真正清除这些行。D: 正确。按月清理时只动一个分区，其他月份不受影响；按 order_date 查询也能用上分区裁剪。"
+  explanation: 'A: A January order arriving in February would be missed by January''s cleanup and its
+    order-date filter would not align with partition pruning. B: An annual boundary cannot remove just
+    one expired month while retaining the others; row-level deletion would be needed instead. C: Hash
+    distribution does not provide monthly retention boundaries, and conditional deletion need not reclaim
+    physical space immediately. D: Correct. Cleanup addresses
+    one month without changing adjacent months, and order_date filters can prune the same boundaries.'
 - id: q2
-  objective: 区分 Partition、Bucket、Tablet、副本、Rowset 和 Segment
-  prompt: 生产订单表的一个月有 6 个 Bucket、副本数为 3。运维查询 SHOW TABLETS FROM orders PARTITIONS(p202505) 返回 18 行，但只有 6 个不同的 TabletId。该怎样解读？
+  objective: Distinguish partitions, buckets, tablets, replicas, rowsets, and segments
+  prompt: One monthly partition in a production order table has six buckets and three replicas per tablet.
+    SHOW TABLETS FROM orders PARTITION (p202505) returns 18 rows but only six distinct TabletId values.
+    How should the output be read?
   options:
   - id: a
-    text: A. 这个月有 18 个分区，每行对应一个分区
+    text: A. The month has 18 partitions, one per output row
   - id: b
-    text: B. 这个月有 18 个不同的 Tablet，每个 Tablet 只有一个副本
+    text: B. The month has 18 distinct tablets with one replica each
   - id: c
-    text: C. 这个月有 6 个 Tablet，每个 Tablet 的 3 个副本各占一行
+    text: C. The month has six tablets; each tablet's three replicas contribute three output rows
   - id: d
-    text: D. 这个月有 6 个 Rowset，每个 Rowset 的 3 个 Segment 各占一行
+    text: D. The month has six rowsets, each represented by three segments
   answer: c
-  explanation: "A: 查询限定了一个分区，18 行不是 18 个分区。B: 只有 6 个不同的 TabletId；多出的行是副本，不是新 Tablet。C: 正确。6 个 Bucket 对应 6 个 Tablet，三个副本各占一行，因此返回 18 行。D: 这个命令展示 Tablet 副本，而不是 Rowset 或 Segment 列表。"
+  explanation: 'A: The inspection is scoped to one partition. B: Six distinct tablet identities do not
+    become 18 tablets because they have replicas. C: Correct. Six buckets give six tablets, and three
+    replicas each yield 18 rows. D: SHOW TABLETS lists tablet replicas rather than rowsets or segments.'
 - id: q3
-  objective: 在不清空整张表的情况下执行分区级生命周期操作
-  prompt: 一张测试表有四月和五月两个按月分区。四月的数据需要清空后重新装载，五月必须保持不变，四月的分区边界也要保留。应选择哪类操作？
+  objective: Perform partition-level lifecycle operations without clearing the whole table
+  prompt: A test table has monthly partitions for April and May. April must be emptied and reloaded using
+    its existing boundary. May must remain unchanged. Which operation meets the scope?
   options:
   - id: a
-    text: A. 整表 TRUNCATE，再把五月的数据重新导入
+    text: A. Truncate the whole table, then reload May
   - id: b
-    text: B. 只对四月分区执行 TRUNCATE，保留同名空分区供重新装载
+    text: B. Truncate only April's partition, retaining a same-name empty partition for reload
   - id: c
-    text: C. DROP 四月分区，并认为原来的四月边界仍自动保留
+    text: C. Drop April and assume its original boundary remains defined automatically
   - id: d
-    text: D. 对整张表执行无条件 DELETE，再按月份把数据补回
+    text: D. Delete every row from the whole table, then restore the months
   answer: b
-  explanation: "A: 整表操作超出四月范围，也会破坏五月数据。B: 正确。分区 TRUNCATE 留下四月的空分区，适合按相同边界重装；五月不受影响。C: DROP 会移除四月分区定义，重装前必须先重新建分区。D: 无条件 DELETE 同样会处理五月，且没有利用明确的分区边界。"
+  explanation: 'A: Whole-table truncation changes May too. B: Correct. Partition truncation retains April''s
+    boundary for reload and leaves May outside scope. C: Dropping removes the definition, which must be
+    recreated before reload. D: An unconditional whole-table delete also affects May and ignores the known
+    boundary.'
 - id: q4
-  objective: 区分查询可见性、元数据变化、物理空间回收和 Compaction 的作用
-  prompt: 同事对已归档的四月分区执行了不带 FORCE 的 DROP。查询中不再看到四月订单，SHOW PARTITIONS 也不再列出四月，但磁盘占用尚未下降。哪个解释符合这三份证据？
+  objective: Distinguish query visibility, metadata changes, physical space reclamation, and the role
+    of Compaction
+  prompt: In a storage-compute coupled deployment, an operator drops an archived April partition without
+    FORCE. Queries no longer show April and SHOW PARTITIONS omits it, but disk usage has not decreased.
+    Which explanation fits all three observations?
   options:
   - id: a
-    text: A. 逻辑可见性和分区元数据已变化；回收站保留期及异步清理可能让物理空间稍后才释放
+    text: A. Query visibility and metadata changed; recycle-bin retention and asynchronous cleanup can
+      release space later
   - id: b
-    text: B. DROP 一定没有成功；分区只有在磁盘字节数下降后才会从 SHOW PARTITIONS 消失
+    text: B. The drop necessarily failed; a partition cannot disappear from metadata until disk usage
+      falls
   - id: c
-    text: C. 四月行只是被条件 DELETE 隐藏，分区仍在表定义中，必须等待 Compaction 才能删除分区
+    text: C. April was hidden by conditional DELETE and its definition remains until Compaction removes
+      the partition
   - id: d
-    text: D. 磁盘未降说明归档一定失败；查询不可见和分区消失都不能说明 DROP 的逻辑结果
+    text: D. The archive necessarily failed; neither query visibility nor the missing partition says anything
+      about the drop
   answer: a
-  explanation: "A: 正确。查询不可见、分区从元数据消失与物理文件回收是不同阶段；未加 FORCE 的 DROP 还受回收站保留期约束。B: 题干已经给出查询和分区元数据的逻辑变化，不能仅凭磁盘占用否定它。C: 这里是 DROP PARTITION 而非条件 DELETE；分区已不在表定义中，也不依赖 Compaction 才能生效。D: 归档是否成功要核对独立的归档证据，不能从此刻的磁盘占用推断。"
+  explanation: 'A: Correct. Logical removal, metadata changes, and physical reclamation are separate stages;
+    omitting FORCE preserves recycle-bin retention. B: The query and metadata evidence already establish
+    logical changes, even while files remain. C: This is DROP PARTITION, not a delete predicate, and its
+    effect does not wait for Compaction. D: Archive success needs independent checks and cannot be inferred
+    from current disk usage.'
 - id: q5
-  objective: 编写包含范围、前置检查、变更、证据和恢复路径的维护 Runbook
-  prompt: 生产订单表要清理一个已过期的完整月份，且以后可能需要按月追溯。值班同事正在写维护 Runbook。哪份恢复安排能应对回收站保留期结束后的误删？
+  objective: Write a maintenance runbook covering scope, prechecks, changes, evidence, and recovery
+  prompt: An expired complete month must be removed from a production order table, but future investigations
+    may need that month. The operator is writing a maintenance runbook. Which recovery plan remains usable
+    after recycle-bin retention expires?
   options:
   - id: a
-    text: A. 只记录回收站保留时间，超过期限再决定是否需要归档
+    text: A. Record only recycle-bin retention and decide whether to archive after it expires
   - id: b
-    text: B. 只保留 DROP 前的 SHOW PARTITIONS 截图，分区边界足以恢复原始行
+    text: B. Keep only a pre-drop SHOW PARTITIONS screenshot; boundaries are sufficient to recreate the
+      original rows
   - id: c
-    text: C. 使用 FORCE 缩短维护时间；误删后再尝试从 Frontend（FE）回收站恢复
+    text: C. Use FORCE to shorten maintenance, then recover from the Frontend (FE) recycle bin if needed
   - id: d
-    text: D. 事前验证该月归档或可重放批次，记录边界和行数；必要时只重建并核对该月分区
+    text: D. Verify the month's archive or replayable batch beforehand, record boundaries and counts,
+      and rebuild and reconcile only that month if needed
   answer: d
-  explanation: "A: 回收站期限过后就不能把它当恢复来源。B: 分区定义和行数不能重新生成每笔订单。C: FORCE 跳过回收站，不能再依赖它恢复；临时决定上游重导也未验证可行性。D: 正确。经过验证的归档或可重放批次提供长期恢复来源，记录的边界与行数用于只恢复目标月份并验收。"
+  explanation: 'A: The recycle bin is unavailable as a recovery source after expiry. B: Definitions and
+    counts cannot regenerate individual orders. C: FORCE bypasses recycle-bin retention, so the FE recycle
+    bin cannot provide the proposed recovery. D: Correct. The verified archive or batch provides
+    the durable source; saved boundaries and counts define and check the recovery scope.'
 - id: q6
-  objective: 用 SHOW PARTITIONS、SHOW TABLETS 和 SHOW CREATE TABLE 记录维护前后的证据
-  prompt: 计划 DROP 一个已归档的月分区。执行后，团队要证明“目标月份已移除、相邻月份仍完整”，还要留下可追查的物理布局线索。哪组证据最充分？
+  objective: Record before-and-after maintenance evidence with SHOW PARTITIONS, SHOW TABLETS, and SHOW
+    CREATE TABLE
+  prompt: An archived monthly partition will be dropped. Afterward, the team must show that the target
+    month is gone and adjacent months remain complete, while retaining physical-layout evidence for investigation.
+    Which evidence set is sufficient?
   options:
   - id: a
-    text: A. 只保存执行后的整表总行数；总数降低就能定位被删的是哪个月
+    text: A. Only the final whole-table row count; a lower total identifies which month was removed
   - id: b
-    text: B. 只保存执行前的 SHOW CREATE TABLE；它能证明维护后每个月的实际行数
+    text: B. Only the pre-change SHOW CREATE TABLE; it proves every month's final row count
   - id: c
-    text: C. 保存 SHOW CREATE TABLE 与前后的 SHOW PARTITIONS、目标及相邻月的独立行数和归档核对，并记录相关 Tablet 布局
+    text: C. The table definition, before-and-after partition metadata, independent target and adjacent-month
+      counts, archive reconciliation, and relevant tablet layout
   - id: d
-    text: D. 只保存执行后的 SHOW TABLETS；副本行数能代替分区边界和业务行数
+    text: D. Only the final SHOW TABLETS; replica rows replace partition boundaries and business counts
   answer: c
-  explanation: "A: 整表总数无法确认减少的是哪个月份，也无法证明相邻月完整。B: 建表契约说明预期结构，不是维护后的数据验收。C: 正确。建表定义、前后分区元数据、按月业务行数、归档和 Tablet 布局分别覆盖边界、变化、业务值与物理排布证据。D: Tablet 副本清单不等于分区业务行数，缺少前后对照也无法定位变化。"
+  explanation: 'A: A total cannot identify the removed month or prove adjacent-month completeness. B:
+    The table definition describes structure, not post-change business values. C: Correct. These checks
+    cover boundaries, changes, logical values, archive readiness, and physical layout. D: Replica listings
+    are not business row counts, and a final snapshot alone cannot locate the change.'
