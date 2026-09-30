@@ -38,14 +38,9 @@ def heading_ids(text):
 
 class EnglishMaterialTest(unittest.TestCase):
     def test_authored_text_is_english(self):
-        for path, text in authored_files(("level1", "level2")):
+        for path, text in authored_files(("level1", "level2", "dw_course")):
             with self.subTest(path=str(path.relative_to(ROOT))):
                 self.assertNotRegex(text, r"[\u3400-\u4dbf\u4e00-\u9fff]")
-
-    def test_level3_materials_include_chinese_learner_text(self):
-        for path, text in authored_files(("level3",)):
-            with self.subTest(path=str(path.relative_to(ROOT))):
-                self.assertRegex(text, r"[\u3400-\u4dbf\u4e00-\u9fff]")
 
     def test_local_markdown_fragments_match_translated_headings(self):
         for path, text in authored_files():
