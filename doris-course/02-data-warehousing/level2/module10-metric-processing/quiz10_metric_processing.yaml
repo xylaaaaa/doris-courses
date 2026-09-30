@@ -3,7 +3,7 @@ description: Six scenario-based multiple-choice questions. No database connectio
 questions:
 - id: q1
   objective: Define a metric with its numerator, denominator, grain, and filters.
-  prompt: Finance asks for daily average pre-tax amount per paid order. Cancelled orders must be excluded, a day follows the order event date, and a day with no paid orders should have no average. Which contract is complete enough to reproduce the number?
+  prompt: Finance asks for daily average pre-tax amount per paid order. A reporting calendar supplies one row for every date, including dates with no paid orders. Cancelled orders are excluded, and a day follows the order event date. Which contract is complete enough to reproduce the number?
   options:
   - id: a
     text: A. Name it average_order_amount and divide each day’s gross amount by its row count, regardless of status.
@@ -14,7 +14,7 @@ questions:
   - id: d
     text: D. Record only a target refresh interval; the dashboard can choose its own population and time rule.
   answer: b
-  explanation: 'A: A name and division are not enough when cancelled orders and date semantics matter. B: Correct. It states population, numerator, denominator, grain, time rule, and zero-count behavior. C: Numerator and denominator would describe different populations. D: Freshness does not define the business calculation.'
+  explanation: 'A: A name and division are not enough when cancelled orders and date semantics matter. B: Correct. It states population, numerator, denominator, grain, time rule, and the NULL value for a calendar date with no paid orders. C: Numerator and denominator would describe different populations. D: Freshness does not define the business calculation.'
 - id: q2
   objective: Distinguish detailed facts from an aggregate serving table.
   prompt: Hundreds of dashboards repeat a daily-by-channel total over millions of orders, while investigators occasionally need to inspect a single order and its customer. Which serving design preserves both needs?
@@ -59,18 +59,18 @@ questions:
   explanation: 'A: APP is the conditional count, but gross amount includes both channels. B: A window annotates its input rows; daily aggregation must establish the day grain first. C: The second cumulative value must include the previous day. D: Correct. Daily gross is 70 then 20, so the running totals are 70 and 90.'
 - id: q5
   objective: Publish a narrowly scoped serving query for dashboard consumers.
-  prompt: A proposed dashboard query scans fewer tablets than before, but its daily amount differs from the independent detail result. The dashboard needs only date, order count, and amount. What is the correct release decision?
+  prompt: A day-grain service table has been reconciled against independent order detail, and its calendar-day coverage is complete. A dashboard needs the last 31 calendar days with only order_date, order_count, and gross_amount; customer identifiers in detail are not approved for this consumer. What should be published?
   options:
   - id: a
-    text: A. Publish the faster result and note the mismatch; fewer scanned tablets prove the new metric is better.
+    text: A. Publish a reviewed view of those three daily fields, and have the dashboard filter it to its 31-day window.
   - id: b
-    text: B. Expose every fact-table column so the dashboard can repair the amount in its own query.
+    text: B. Give the dashboard detail-table access and let it aggregate the three measures while hiding customer identifiers in its UI.
   - id: c
-    text: C. Stop publication, reconcile the mismatch, then expose only the reviewed fields and measure runtime separately.
+    text: C. Expose every present and future service-table column because reconciling today's three measures approves all later fields too.
   - id: d
-    text: D. Rename the amount column, since a new label prevents consumers from comparing it to detail.
-  answer: c
-  explanation: 'A: Scan pruning is plan evidence, not metric acceptance. B: Exporting physical detail shifts an unresolved calculation to consumers. C: Correct. First establish a correct, narrow contract; then assess execution cost with runtime evidence. D: A renamed incorrect value remains incorrect.'
+    text: D. Publish one 31-day grand-total row; restricting the date range also preserves the requested daily grain.
+  answer: a
+  explanation: 'A: Correct. The reconciled service table supplies the declared day grain; the view limits exposed fields, and the date filter bounds the dashboard query. B: Hiding identifiers in a UI does not remove detail-table access or prevent each dashboard from redefining the metric. C: Review of three fields does not authorize unrelated present or future fields. D: One 31-day total loses the daily rows that the dashboard needs.'
 - id: q6
   objective: Choose exact or approximate distinct counts according to the business tolerance.
   prompt: A loyalty payout requires an exact monthly count of unique buyers. A high-traffic trend chart can tolerate a stated 2% estimation error. Which choice matches the two contracts?

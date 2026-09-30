@@ -59,10 +59,10 @@ questions:
   explanation: 'A: Object existence does not establish plan selection. B: A base-table scan can return correct data without rewriting. C: A direct base-table query says nothing about MV refresh state. D: Correct. The plan is evidence of the selected scan, while value checks answer a different question.'
 - id: q5
   objective: Keep a published view contract stable while changing its implementation.
-  prompt: Two dashboards consume a view with one row per day and the columns order_date, order_count, and gross_amount. A refreshed MV now stores the same grain and meanings. How should the serving implementation change?
+  prompt: Two dashboards consume a view with one row per day and the columns order_date, order_count, and gross_amount. They allow up to ten minutes of data lag. An MV stores the same grain and meanings; the team verified that its completed refresh includes every source batch required by that freshness rule. How should the serving implementation change?
   options:
   - id: a
-    text: A. Point the view at the MV, keep its published columns and meanings, and compare results before switching consumers.
+    text: A. Point the view at the MV, keep its published columns and meanings, and compare results at the same data cut before switching consumers.
   - id: b
     text: B. Give dashboards the MV name and its physical columns; keeping the old view would prevent acceleration.
   - id: c
@@ -70,7 +70,7 @@ questions:
   - id: d
     text: D. Rename gross_amount to revenue during the switch; the MV will make the two business measures equivalent.
   answer: a
-  explanation: 'A: Correct. Consumers can retain a stable contract while maintainers change and validate its source. B: Exposing a physical object couples dashboards to implementation details. C: Customer-level data needs a finer grain or separate interface, not an unexplained column on a daily total. D: A storage change cannot turn order amount into recognized revenue.'
+  explanation: 'A: Correct. The verified refresh meets the stated freshness limit; comparing the same data cut checks the values while consumers retain a stable contract. B: Exposing a physical object couples dashboards to implementation details. C: Customer-level data needs a finer grain or separate interface, not an unexplained column on a daily total. D: A storage change cannot turn order amount into recognized revenue.'
 - id: q6
   objective: Decide whether repeated query cost justifies maintaining a stored result.
   prompt: One report runs a costly unchanged daily aggregation hundreds of times each hour. Consumers accept a ten-minute delay, and the team can monitor refresh failures. Which trade-off is reasonable?
