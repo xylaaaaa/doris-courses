@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 orders and customers; Module 8 views |
-| Estimated time | About 93 minutes: reading 45, Lab 40, Quiz 8 |
+| Suggested time | About 113 minutes: reading 45, Lab 60, Quiz 8; first-start image downloads/builds are additional |
 
 [Level 2 contents](../README.md) · [Open Lab 9](lab9_modeling_and_joins.ipynb) · [Open Quiz 9](quiz9_modeling_and_joins.ipynb)
 
@@ -32,7 +32,7 @@ After this module, you should be able to:
 | 9.2 Grain and joins | Why can a join double an amount? | 15 min |
 | 9.3 Physical joins | Where do matching rows meet? | 10 min |
 | 9.4 Acceptance checks | How do we verify keys, rows, and amounts together? | 8 min |
-| Lab 9 / Quiz 9 | Build and check the order/customer example | 40 / 8 min |
+| Lab 9 / Quiz 9 | Existing foundations and extended core evidence | 60 / 8 min |
 
 ## 9.1 Give Each Warehouse Layer a Job
 
@@ -171,6 +171,27 @@ ORDER BY stage;
 | After left join | 10 | 10 | 1400.00 |
 
 Also check that the dimension's customer IDs are unique and the missing-dimension query returns no rows. If the totals differ, determine whether duplicate dimension keys inflated facts or a mistaken inner join dropped them. Passing just one check is insufficient.
+
+## 9.5 Put the Four Responsibilities into One Executable Chain
+
+The main Lab now creates a small ODS → DWD → DWS → ADS chain. A separate, committed teaching fixture supplies eight business orders over three dates, one older repeated order version, one malformed amount, six distinct payments including a future one, and a repeated payment delivery. These are deliberately new data: enough variation to test payment windows and repeat purchase later, without claiming to reconstruct WWI payment history.
+
+ODS preserves ten order deliveries and seven payment deliveries. DWD keeps eight valid current orders and six distinct payments. The duplicate order is resolved by business version, not arrival time; the duplicate payment is resolved by its stable payment ID under this fixture's identical-content rule. A different payload for the same ID needs conflict handling. Retaining raw deliveries makes both decisions reviewable.
+
+DWS joins the current customer dimension and aggregates order amount by order date and region. ADS publishes that result as a narrow view. Its five rows represent five date/region combinations, not five orders. The total must still reconcile to the eight cleaned orders and 850.00 of original order amount. A refund does not erase an order or redefine this measure as net collections.
+
+| Evidence | What it supports | What it does not support |
+| --- | --- | --- |
+| Raw delivery IDs and rejected amount | Input coverage and traceability | Business order uniqueness |
+| Latest valid order per business key/version | Current-state result for the declared rule | Every possible CDC conflict policy |
+| Independent detail and ADS row comparison | Grain and amount reconciliation | Production query speed |
+| Explicit rebuild followed by equal outputs | Repeatable snapshot processing | A continuously scheduled or transactional multi-layer pipeline |
+
+Module 10 reads these DWD tables; Module 11 reads its paid-metric outputs. This makes the learning path executable end to end. The snapshot rebuild is intentionally visible: appending the same aggregate a second time is not an idempotent refresh. No external CDC connector, scheduler, or multi-table atomicity is implied.
+
+### Runtime Filter: reduce work without changing join meaning
+
+A Runtime Filter is produced from join-side values during execution and can remove probe-side rows that cannot match. It is not a permission policy or a fix for duplicate dimension keys. For an inner join where only a small set of customer IDs qualifies, it may reduce scan work; for other SQL shapes, selectivities and scan sources, benefit differs. Read the filter and exchange nodes in the plan, then use Profile to inspect actual work. A single-BE example does not establish Broadcast, Shuffle or Colocate behavior across nodes. See [Doris Runtime Filter](https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/runtime-filter/).
 
 ## Hands-on Lab: Order Facts and Customer Dimensions
 

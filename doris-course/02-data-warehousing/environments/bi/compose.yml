@@ -1,0 +1,19 @@
+name: doris-warehousing-bi
+services:
+  superset:
+    build: .
+    image: doris-course-superset:4.1.2-pydoris1.1.0
+    mem_limit: 2g
+    cpus: 2
+    ports:
+      - '127.0.0.1:51888:8088'
+    volumes:
+      - bi-metadata:/app/superset_home
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8088/health']
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+volumes:
+  bi-metadata:

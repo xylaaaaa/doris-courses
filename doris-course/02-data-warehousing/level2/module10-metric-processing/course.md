@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 ingestion and quality checks; Module 9 grain and joins |
-| Estimated time | About 98 minutes: reading 50, Lab 40, Quiz 8 |
+| Suggested time | About 153 minutes: reading 55, Lab 90, Quiz 8; first-start image downloads/builds are additional |
 
 [Level 2 contents](../README.md) · [Open Lab 10](lab10_metric_processing.ipynb) · [Open Quiz 10](quiz10_metric_processing.ipynb)
 
@@ -21,7 +21,7 @@ After this module, you should be able to:
 2. Distinguish order detail from an aggregate service table.
 3. Reconcile service results against an independent detail query.
 4. Use window functions and conditional aggregation without accidentally changing the intended grain.
-5. Publish a bounded query result for dashboard consumers and separate correctness checks from performance checks.
+5. Verify a result-preserving optimization using actual Profile counters and explicitly bounded latency samples.
 6. Choose exact or approximate distinct counts according to the business tolerance.
 
 ## Module Schedule
@@ -33,7 +33,7 @@ After this module, you should be able to:
 | 10.3 Window and conditional logic | What happens to row grain? | 12 min |
 | 10.4 Distinct counts and evidence | Exact or approximate; plan or execution? | 10 min |
 | 10.5 Acceptance | Can detail independently reproduce the service value? | 4 min |
-| Lab 10 / Quiz 10 | Build, reconcile, and explain | 40 / 8 min |
+| Lab 10 / Quiz 10 | Existing foundations and extended core evidence | 90 / 8 min |
 
 ## 10.1 Write a Metric Contract Before SQL
 
@@ -138,13 +138,13 @@ The output is one row per date. `WHERE` filters source rows before grouping; `HA
 
 ## 10.4 Choose Precision and Read the Right Evidence
 
-Distinct visitors (UV) require an accuracy promise before a function choice:
+Unique visitors (UV) require an accuracy promise before a function choice:
 
 | Method | Result | Appropriate when | Cost or limitation |
 | --- | --- | --- | --- |
 | `COUNT(DISTINCT id)` | Exact | Reconciliation must be exact and resources permit | Maintains a distinct set. |
 | Bitmap | Exact | Integer IDs and large reusable distinct aggregates | Uses Bitmap-compatible IDs and aggregation functions. |
-| HLL | Approximate | Scale matters more than an exact count | Approximation must be disclosed to consumers. |
+| HyperLogLog (HLL) | Approximate | Scale matters more than an exact count | Approximation must be disclosed to consumers. |
 
 Do not call HLL exact because it happens to match a small example, or assume arbitrary strings can be placed directly in a Bitmap aggregate.
 
@@ -193,6 +193,16 @@ ORDER BY order_date;
 ```
 
 A full outer join retains a date that appears on only one side. Do not replace a missing-side `NULL` with zero before investigating: a missing aggregate row is not the same as a real zero. Check row counts, amounts, date coverage, nulls, and important dimensions before tuning a plan. Optimizing an incorrect answer only returns the incorrect answer faster.
+
+## 10.6 Carry a Business Definition Through to Execution
+
+The earlier initial-order metric is intentionally limited. The extended case now follows the ODS → DWD → DWS → ADS chain introduced in Module 9 and uses separate order, payment, and refund records. Operational Data Store (ODS) deliveries are retained, Data Warehouse Detail (DWD) removes invalid deliveries and resolves versions, Data Warehouse Summary (DWS) holds declared aggregates, and the Application Data Service (ADS) contract is what a consumer reads.
+
+Payment GMV uses successful deduplicated payments in a left-closed, right-open business-time window. It is not the sum of latest orders labeled `PAID`: a refunded order still made an earlier payment. The case assumes one successful payment per order. Partial refunds are separate facts; net collections deduct them, while paid GMV does not. Conversion follows the created-order cohort and its payment cutoff. Repeat-buyer rate counts customers with at least two paid orders, not repeated payment deliveries. Store each rate's numerator and denominator so readers can review its meaning.
+
+The Lab then compares exact distinct SQL, Bitmap, and HLL on a generated population with repeated integer IDs. HLL's observed error is not an accuracy guarantee. The exact/approximate distinction and applicable functions are documented in [Bitmap](https://doris.apache.org/docs/4.x/sql-manual/basic-element/sql-data-types/aggregate/BITMAP/) and [HLL](https://doris.apache.org/docs/4.x/sql-manual/basic-element/sql-data-types/aggregate/HLL/).
+
+Finally, the Lab generates 100,000 orders across 32 dates and builds a 32-row service table. Equal full results establish correctness; actual Profile scan counters establish what work each execution performed. Twenty sequential same-host samples, with declared warm-up and cache settings, illustrate latency measurement without claiming production capacity. Do not substitute an `EXPLAIN` estimate for executed counters or assume fewer scanned rows must produce a faster wall-clock result. See [Query Profile](https://doris.apache.org/docs/4.x/query-acceleration/query-profile/).
 
 ## Hands-on Lab: Build and Reconcile Daily Metrics
 

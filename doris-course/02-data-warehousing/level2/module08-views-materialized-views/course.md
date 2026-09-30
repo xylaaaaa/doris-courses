@@ -5,7 +5,7 @@
 | Course | Data Warehousing with Apache Doris · Level 2 |
 | Product scope | Apache Doris 4.x; examples use the course's 4.1.3 sandbox |
 | Prerequisites | Level 1 Lab 5 and its `orders_imported` table |
-| Estimated time | About 88 minutes: reading 40, Lab 40, Quiz 8 |
+| Suggested time | About 118 minutes: reading 45, Lab 65, Quiz 8; first-start image downloads/builds are additional |
 
 [Level 2 contents](../README.md) · [Open Lab 8](lab8_views_and_materialized_views.ipynb) · [Open Quiz 8](quiz8_views_and_materialized_views.ipynb)
 
@@ -32,7 +32,7 @@ After this module, you should be able to:
 | 8.2 Precomputation | When is a materialized view worth its cost? | 10 min |
 | 8.3 Incremental refresh | Does `AUTO` mean row-by-row accumulation? | 12 min |
 | 8.4 Rewrite evidence | How do we know which object a query scanned? | 10 min |
-| Lab 8 / Quiz 8 | Build, inspect, and explain the result | 40 / 8 min |
+| Lab 8 / Quiz 8 | Existing foundations and extended core evidence | 65 / 8 min |
 
 ## 8.1 Use a Regular View to Share Meaning
 
@@ -113,7 +113,7 @@ GROUP BY DATE(event_time);
 | `ON MANUAL` | Refresh is triggered manually | Every `SELECT` refreshes automatically |
 | `GROUP BY DATE(event_time)` | Store daily aggregates | A customer-level filter remains possible |
 
-The view stores daily `COUNT(*)` and `SUM(order_amount)` values but not `customer_id`. A customer-filtered query therefore cannot be answered from this result alone. The definition has no partition mapping, so the Lab does not demonstrate refreshing only one day. It also does not schedule automatic refresh. These are separate design choices, not hidden benefits of creating an MV.
+The view stores daily `COUNT(*)` and `SUM(order_amount)` values but not `customer_id`. A customer-filtered query therefore cannot be answered from this result alone. The definition has no partition mapping, so this first MV does not demonstrate refreshing only one day; Section 8.5 uses a separate partitioned MV to observe that path. It also does not schedule automatic refresh. These are separate design choices, not hidden benefits of creating an MV.
 
 A materialized view is most useful for stable, frequently repeated expensive queries when its freshness contract can be met. It is less compelling for one-off exploration, tiny data, rapidly changing query shapes, or a refresh schedule that cannot keep up with updates. Compare both the read savings and write/refresh cost before adopting one.
 
@@ -170,9 +170,23 @@ If no rewrite appears, check three groups of causes:
 
 Do not use `FROM orders_daily_mv_l2` as “proof” of transparent rewrite, and do not infer rewrite from a descriptive object name or one matching answer.
 
+## 8.5 Observe Three Different Maintenance Paths
+
+The extended Lab uses isolated sources rather than modifying the shared Level 1 input. First it builds a synchronous aggregate index on a Duplicate Key table. After its initial DDL job finishes, a new committed order is included without a separate refresh. The cost moves into write maintenance; `EXPLAIN` still decides whether a compatible read uses that index.
+
+Next, two daily fact partitions join an unpartitioned customer dimension. The asynchronous MV groups by `(order_date, region)` and maps its partitions to the fact date. Adding an order on the second day causes one result partition to be republished. Updating a customer's region invalidates the unpartitioned dependency and causes both result partitions to be republished in this example. One day can have identical values before and after a wider refresh, so value equality alone cannot establish refresh scope.
+
+| Path | Trigger used in the Lab | Evidence to inspect |
+| --- | --- | --- |
+| Synchronous aggregate index | A committed base-table write after the initial build | Current aggregate and the selected index in `EXPLAIN` |
+| Partitioned asynchronous join MV; one fact date changes | Manual `REFRESH ... AUTO` | Values, partition-identity/version changes, and the task's refresh-partition list |
+| Same MV; unpartitioned dimension changes | Manual `REFRESH ... AUTO` | Both result partitions republished, even if one day's values are unchanged |
+
+A replaced partition can retain the same visible version number. Compare partition identity together with visible version. These describe publication, not operator CPU or scan cost. Use task records to explain scope and Query Profile to measure work. The Lab proves these controlled refresh paths; it does not pretend to validate automatic scheduling, refresh-failure recovery, or production latency. The partition mapping and non-partitioned dependency rules are documented in [CREATE ASYNC MATERIALIZED VIEW](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/table-and-view/async-materialized-view/CREATE-ASYNC-MATERIALIZED-VIEW/).
+
 ## Hands-on Lab: From Shared Definition to Verified Materialization
 
-Open [Lab 8](lab8_views_and_materialized_views.ipynb). It connects to the course database, creates `orders_service_view_l2` and `orders_daily_mv_l2`, checks `mv_infos`, compares direct MV values with a canonical aggregation, and records the `EXPLAIN` plan. A second, isolated `_l2` source then receives a new order: its regular view changes immediately, while its manual-trigger MV changes only after an explicit refresh. The Lab never writes to the Level 1 source table.
+Open [Lab 8](lab8_views_and_materialized_views.ipynb). It connects to the course database, creates `orders_service_view_l2` and `orders_daily_mv_l2`, checks `mv_infos`, compares direct MV values with a canonical aggregation, and records the `EXPLAIN` plan. A second, isolated `_l2` source then receives a new order: its regular view changes immediately, while its manual-trigger MV changes only after an explicit refresh. It then compares synchronous write maintenance, fact-partition refresh, and a full refresh after an unpartitioned dimension change. The Lab never writes to the Level 1 source table.
 
 | Check | Expected observation |
 | --- | --- |

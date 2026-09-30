@@ -89,3 +89,9 @@ An Aggregate Key `SUM` column accumulates repeated inserts. In this isolated Lab
 - [ ] Use an anti-join, `EXPLAIN`, and Query Profile to investigate incorrect or slow results.
 
 After Level 2, continue to Level 3 for publishing, access control, audit, and storage lifecycle management—or revisit Level 1 with a larger dataset.
+
+## Extended Core Case and Consumer
+
+Lab 8 now observes synchronous maintenance and partition-aware/full asynchronous refresh. Labs 9–11 carry one independent order/payment/refund fixture through ODS, DWD, DWS and ADS, then into a real three-chart Superset dashboard. Run **Lab 9 Sections 6–8 → Lab 10 Sections 6–9 → Lab 11 Sections 5–6** in order, including the existing foundations. This case does not rewrite Level 1 inputs or claim to be WWI history.
+
+Lab 10 includes a 100,000-row measured Profile comparison and 20 sequential timing samples per query, not a production benchmark. Lab 11 explicitly starts a loopback-only local BI service with a 2 GiB memory cap and persistent metadata. See [the local Superset environment](../environments/bi/README.md); first-start downloads/builds are outside the suggested learning time. The database reader is restricted to the reviewed view. Local UI administrator credentials and deployment settings are for teaching only.

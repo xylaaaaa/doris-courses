@@ -1,23 +1,31 @@
-title: 'Module 10: Metric Processing and Serving'
+title: 'Module 10: Metric Processing and Delivery'
 description: Six scenario-based multiple-choice questions. No database connection required.
 questions:
 - id: q1
   objective: Define a metric with its numerator, denominator, grain, and filters.
-  prompt: Finance asks for daily average pre-tax amount per paid order. A reporting calendar supplies one row for every date, including dates with no paid orders. Cancelled orders are excluded, and a day follows the order event date. Which contract is complete enough to reproduce the number?
+  prompt: Finance asks for daily average pre-tax amount per paid order. A reporting calendar supplies one row for
+    every date, including dates with no paid orders. Cancelled orders are excluded, and a day follows the order
+    event date. Which contract is complete enough to reproduce the number?
   options:
   - id: a
     text: A. Name it average_order_amount and divide each day’s gross amount by its row count, regardless of status.
   - id: b
-    text: B. Record pre-tax amount of paid orders divided by paid-order count, grouped by event date, with a NULL result for a zero denominator.
+    text: B. Record pre-tax amount of paid orders divided by paid-order count, grouped by event date, with a NULL
+      result for a zero denominator.
   - id: c
-    text: C. Divide all order amounts by paid-order count; the cancelled rows affect only the numerator, not the contract.
+    text: C. Divide all order amounts by paid-order count; the cancelled rows affect only the numerator, not the
+      contract.
   - id: d
     text: D. Record only a target refresh interval; the dashboard can choose its own population and time rule.
   answer: b
-  explanation: 'A: A name and division are not enough when cancelled orders and date semantics matter. B: Correct. It states population, numerator, denominator, grain, time rule, and the NULL value for a calendar date with no paid orders. C: Numerator and denominator would describe different populations. D: Freshness does not define the business calculation.'
+  explanation: 'A: A name and division are not enough when cancelled orders and date semantics matter. B: Correct.
+    It states population, numerator, denominator, grain, time rule, and the NULL value for a calendar date with
+    no paid orders. C: Numerator and denominator would describe different populations. D: Freshness does not define
+    the business calculation.'
 - id: q2
   objective: Distinguish detailed facts from an aggregate serving table.
-  prompt: Hundreds of dashboards repeat a daily-by-channel total over millions of orders, while investigators occasionally need to inspect a single order and its customer. Which serving design preserves both needs?
+  prompt: Hundreds of dashboards repeat a daily-by-channel total over millions of orders, while investigators occasionally
+    need to inspect a single order and its customer. Which serving design preserves both needs?
   options:
   - id: a
     text: A. Retain order detail and maintain a daily-by-channel aggregate for repeated dashboard queries.
@@ -28,24 +36,33 @@ questions:
   - id: d
     text: D. Store one total per day but label it as one row per customer for future drill-down.
   answer: a
-  explanation: 'A: Correct. The service table avoids repeated aggregation at a declared grain, while detail remains available for drill-down and verification. B: Aggregation discards order and customer identity. C: Copies increase synchronization and definition drift. D: Relabeling a day-grain value does not restore customer grain.'
+  explanation: 'A: Correct. The service table avoids repeated aggregation at a declared grain, while detail remains
+    available for drill-down and verification. B: Aggregation discards order and customer identity. C: Copies increase
+    synchronization and definition drift. D: Relabeling a day-grain value does not restore customer grain.'
 - id: q3
   objective: Validate metrics using an independent query against detailed data.
-  prompt: A service table reports 120 orders for Tuesday, while a detail-table aggregation with the same date and status filter reports 117. The service build returned success. What should block publication?
+  prompt: A service table reports 120 orders for Tuesday, while a detail-table aggregation with the same date and
+    status filter reports 117. The service build returned success. What should block publication?
   options:
   - id: a
     text: A. Nothing; a successful build is stronger evidence than an independently computed total.
   - id: b
     text: B. Only a slow Query Profile; a fast service query can tolerate a three-order discrepancy.
   - id: c
-    text: C. The mismatch; compare input coverage, filters, and load batches before declaring the serving value correct.
+    text: C. The mismatch; compare input coverage, filters, and load batches before declaring the serving value
+      correct.
   - id: d
     text: D. A missing dashboard screenshot; the chart is the independent source of truth.
   answer: c
-  explanation: 'A: Build success says the statement ran, not that it used the intended population. B: Performance evidence cannot resolve a business mismatch. C: Correct. An independent detail query at the same cut and filter exposes a result that needs investigation. D: A chart typically reads the same service value and is not independent evidence.'
+  explanation: 'A: Build success says the statement ran, not that it used the intended population. B: Performance
+    evidence cannot resolve a business mismatch. C: Correct. An independent detail query at the same cut and filter
+    exposes a result that needs investigation. D: A chart typically reads the same service value and is not independent
+    evidence.'
 - id: q4
   objective: Use window functions without accidentally changing row grain.
-  prompt: A service input has Jan 1 APP (2 orders, 40), Jan 1 STORE (1 order, 30), and Jan 2 APP (1 order, 20). The dashboard needs one row per day with APP orders and cumulative gross amount across all channels. What should the two rows show?
+  prompt: A service input has Jan 1 APP (2 orders, 40), Jan 1 STORE (1 order, 30), and Jan 2 APP (1 order, 20).
+    The dashboard needs one row per day with APP orders and cumulative gross amount across all channels. What should
+    the two rows show?
   options:
   - id: a
     text: A. Jan 1 APP=2, cumulative=40; Jan 2 APP=1, cumulative=60, because STORE is excluded from every measure.
@@ -56,32 +73,47 @@ questions:
   - id: d
     text: D. Jan 1 APP=2, cumulative=70; Jan 2 APP=1, cumulative=90, after first aggregating to day grain.
   answer: d
-  explanation: 'A: APP is the conditional count, but gross amount includes both channels. B: A window annotates its input rows; daily aggregation must establish the day grain first. C: The second cumulative value must include the previous day. D: Correct. Daily gross is 70 then 20, so the running totals are 70 and 90.'
+  explanation: 'A: APP is the conditional count, but gross amount includes both channels. B: A window annotates
+    its input rows; daily aggregation must establish the day grain first. C: The second cumulative value must include
+    the previous day. D: Correct. Daily gross is 70 then 20, so the running totals are 70 and 90.'
 - id: q5
-  objective: Publish a narrowly scoped serving query for dashboard consumers.
-  prompt: A day-grain service table has been reconciled against independent order detail, and its calendar-day coverage is complete. A dashboard needs the last 31 calendar days with only order_date, order_count, and gross_amount; customer identifiers in detail are not approved for this consumer. What should be published?
+  objective: Verify a result-preserving optimization using actual Profile counters and explicitly bounded latency
+    samples.
+  prompt: Two queries return identical complete daily results on the same single Backend (BE). With SQL result caches
+    disabled, their executed Query Profiles show 240,000 scanned rows for detail and 60 for a service table. Twenty
+    warmed, sequential timing samples have similar empirical 95th percentiles (P95). Which conclusion is supported?
   options:
   - id: a
-    text: A. Publish a reviewed view of those three daily fields, and have the dashboard filter it to its 31-day window.
+    text: A. The service query scanned fewer rows in these executions; this sample does not establish lower production
+      latency.
   - id: b
-    text: B. Give the dashboard detail-table access and let it aggregate the three measures while hiding customer identifiers in its UI.
+    text: B. The scan-row ratio proves the service query will always have proportionally lower wall-clock latency.
   - id: c
-    text: C. Expose every present and future service-table column because reconciling today's three measures approves all later fields too.
+    text: C. Similar P95 values prove both queries must have scanned the same amount of data.
   - id: d
-    text: D. Publish one 31-day grand-total row; restricting the date range also preserves the requested daily grain.
+    text: D. Twenty concurrency-one samples establish the production dashboard service-level agreement (SLA) under
+      hundreds of simultaneous readers.
   answer: a
-  explanation: 'A: Correct. The reconciled service table supplies the declared day grain; the view limits exposed fields, and the date filter bounds the dashboard query. B: Hiding identifiers in a UI does not remove detail-table access or prevent each dashboard from redefining the metric. C: Review of three fields does not authorize unrelated present or future fields. D: One 31-day total loses the daily rows that the dashboard needs.'
+  explanation: 'A: Correct. Executed counters support the scan-work conclusion, while bounded same-host samples
+    do not establish production latency or concurrency capacity. B: Planning, scheduling and fixed overhead also
+    affect latency; fewer rows do not imply a proportional wall-clock speedup. C: Similar latency can coexist with
+    different scanned rows. D: A small sequential experiment does not reproduce production concurrency, data distribution
+    or failure conditions.'
 - id: q6
   objective: Choose exact or approximate distinct counts according to the business tolerance.
-  prompt: A loyalty payout requires an exact monthly count of unique buyers. A high-traffic trend chart can tolerate a stated 2% estimation error. Which choice matches the two contracts?
+  prompt: A loyalty payout requires an exact monthly count of unique buyers. A high-traffic trend chart can tolerate
+    a stated 2% estimation error. Which choice matches the two contracts?
   options:
   - id: a
     text: A. Use an approximate distinct estimate for both; a small expected error has no payout impact.
   - id: b
-    text: B. Use exact distinct counting for the payout and an approximate method only for the trend chart, with its tolerance documented.
+    text: B. Use exact distinct counting for the payout and an approximate method only for the trend chart, with
+      its tolerance documented.
   - id: c
     text: C. Sum each day’s distinct-buyer count for both; buyers returning on another day cannot be counted twice.
   - id: d
     text: D. Count all orders for both; multiple orders from one buyer still represent one unique buyer.
   answer: b
-  explanation: 'A: Even a small estimate error can change a financial payout, which requires exactness. B: Correct. The business tolerance determines whether approximation is acceptable. C: Adding daily distinct counts double-counts buyers active on multiple days. D: Order count and unique-buyer count answer different questions.'
+  explanation: 'A: Even a small estimate error can change a financial payout, which requires exactness. B: Correct.
+    The business tolerance determines whether approximation is acceptable. C: Adding daily distinct counts double-counts
+    buyers active on multiple days. D: Order count and unique-buyer count answer different questions.'
