@@ -5,7 +5,7 @@
 | 所属课程 | Data Warehousing with Apache Doris · Level 3 |
 | 产品范围 | Apache Doris 4.x；示例使用课程单节点沙箱 |
 | 前置知识 | Level 1 的订单表；Level 2 的消费者视图仅用于独立练习 |
-| 建议用时 | 约 75 分钟：阅读 30 分钟、实验 40 分钟、测验 5 分钟 |
+| 建议用时 | 约 78 分钟：阅读 30 分钟、实验 40 分钟、测验 8 分钟 |
 
 [Level 3 目录](../README.md) · [打开 Lab 12](lab12_publishing_permissions_audit.ipynb) · [打开 Quiz 12](quiz12_publishing_permissions_audit.ipynb)
 
@@ -43,7 +43,7 @@ Level 2 最后发布了语义视图 `bi_order_metrics_l2`。现在 BI 负责人�
 | 12.4 看板下线后如何收回权限？ | 撤销顺序和影响范围 | 5 分钟 |
 | 12.5 表级权限不够细怎么办？ | 列权限、Row Policy 和脱敏 | 4 分钟 |
 | Lab 12 | 创建角色、验证普通用户访问并清理 | 40 分钟 |
-| Quiz 12 | 检查发布治理概念 | 5 分钟 |
+| Quiz 12 | 检查发布治理概念 | 8 分钟 |
 
 ## 12.1 BI 要的到底是什么？
 
@@ -269,7 +269,7 @@ TO ROLE 'course_bi_reader_l3';
 
 ## 知识测验
 
-[Quiz 12](quiz12_publishing_permissions_audit.ipynb) 包含 5 道离线题目，检查消费者契约、最小权限、数据权限与管理权限的区别、发布证据和撤销边界。
+[Quiz 12](quiz12_publishing_permissions_audit.ipynb) 包含 6 道情境题，检查消费者契约、最小权限、数据权限与管理权限的区别、发布证据、撤销边界以及行级权限。
 
 ## 官方参考资料
 

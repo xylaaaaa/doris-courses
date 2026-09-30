@@ -52,8 +52,8 @@ class Level3MaterialsTest(unittest.TestCase):
             quiz = next(path.glob("quiz*.yaml"))
             self.assertTrue((path / quiz.name.replace(".yaml", ".ipynb")).is_file(), module)
             payload = yaml.safe_load(quiz.read_text())
-            self.assertEqual(len(payload["questions"]), 5, quiz)
-            self.assertEqual([len(q["options"]) for q in payload["questions"]], [4] * 5)
+            self.assertEqual(len(payload["questions"]), 6, quiz)
+            self.assertEqual([len(q["options"]) for q in payload["questions"]], [4] * 6)
 
     def test_quizzes_explain_every_option_and_track_reading_goals(self):
         for module in self.modules:

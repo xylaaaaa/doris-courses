@@ -5,7 +5,7 @@
 | 所属课程 | Data Warehousing with Apache Doris · Level 3 |
 | 产品范围 | Apache Doris 4.x；示例使用课程单节点沙箱 |
 | 前置知识 | Level 1 的表模型和导入；Module 12 的变更证据与撤销思路 |
-| 建议用时 | 约 75 分钟：阅读 30 分钟、实验 40 分钟、测验 5 分钟 |
+| 建议用时 | 约 78 分钟：阅读 30 分钟、实验 40 分钟、测验 8 分钟 |
 
 [Level 3 目录](../README.md) · [打开 Lab 13](lab13_storage_and_lifecycle.ipynb) · [打开 Quiz 13](quiz13_storage_lifecycle.ipynb)
 
@@ -40,7 +40,7 @@
 | 13.4 TRUNCATE 之后数据和空间怎样变化？ | 可见性、元数据和物理空间 | 6 分钟 |
 | 13.5 如何把维护写成 Runbook？ | 范围、检查、变更、证据和恢复 | 4 分钟 |
 | Lab 13 | 对比隔离表上的 TRUNCATE 与 DROP/RECOVER | 40 分钟 |
-| Quiz 13 | 检查生命周期概念 | 5 分钟 |
+| Quiz 13 | 检查生命周期概念 | 8 分钟 |
 
 ## 13.1 为什么要按分区清理？
 
@@ -264,7 +264,7 @@ Notebook 会自动对比各分区的 `PartitionId` 与行数；如需进一步�
 
 ## 知识测验
 
-[Quiz 13](quiz13_storage_lifecycle.ipynb) 包含 5 道离线题目，检查分区边界、物理布局证据、分区级清理、Compaction 边界和维护 Runbook。
+[Quiz 13](quiz13_storage_lifecycle.ipynb) 包含 6 道情境题，检查分区边界、物理布局证据、分区级清理、查询可见性与空间回收、维护 Runbook 和变更证据。
 
 ## 官方参考资料
 

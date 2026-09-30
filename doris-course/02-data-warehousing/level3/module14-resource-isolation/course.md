@@ -5,7 +5,7 @@
 | 所属课程 | Data Warehousing with Apache Doris · Level 3 |
 | 产品范围 | Apache Doris 4.x；示例使用课程单节点沙箱 |
 | 前置知识 | Module 12 的角色授权和看板发布；Module 13 的按月分区 |
-| 建议用时 | 约 65 分钟：阅读 30 分钟、实验 30 分钟、测验 5 分钟 |
+| 建议用时 | 约 68 分钟：阅读 30 分钟、实验 30 分钟、测验 8 分钟 |
 
 [Level 3 目录](../README.md) · [打开 Lab 14](lab14_resource_isolation.ipynb) · [打开 Quiz 14](quiz14_resource_isolation.ipynb)
 
@@ -40,7 +40,7 @@ Module 12 解决的是“谁能看到哪些数据”，这里的问题是“一�
 | 14.4 怎样挡住失控查询？ | 执行时限、Workload Policy 和 SQL Block Rule | 6 分钟 |
 | 14.5 如何把资源配置写成 Runbook？ | 资源组、路由、保护、证据和撤销 | 4 分钟 |
 | Lab 14 | 为看板和临时分析划分资源组，观察排队和拦截 | 30 分钟 |
-| Quiz 14 | 检查资源隔离和查询保护概念 | 5 分钟 |
+| Quiz 14 | 检查资源隔离和查询保护概念 | 8 分钟 |
 
 ## 14.1 谁在和看板抢资源？
 
@@ -65,11 +65,12 @@ Workload Group 让 Doris 按组划分资源：每个组有自己的一套上限�
 
 一条查询落在哪个组，Doris 按下面的顺序决定：
 
-1. 会话变量 `workload_group` 不为空，就用它指定的组；
-2. 否则使用账号属性 `default_workload_group`；
-3. 两者都没有设置时，使用内置的 `normal` 组。
+1. 查询上的 `SET_VAR(workload_group=...)` 提示指定组时，优先使用它；
+2. 否则，会话变量 `workload_group` 不为空时使用会话指定的组；
+3. 否则使用账号属性 `default_workload_group`；
+4. 都没有设置时使用内置的 `normal` 组。
 
-`normal` 组对所有账号开放，也不能被删除。在没有配置任何资源组的集群里，包括 root 在内的所有查询都落在这里，这正是单元开头看板和临时分析互相拖累的原因。Lab 14 的第一步会在沙箱里确认这一点：root 的会话变量为空，`SHOW PROPERTY` 显示的 `default_workload_group` 是 `normal`。
+`normal` 组对所有账号开放，也不能被删除。在没有配置任何资源组的集群里，包括 root 在内的所有查询都落在这里，这正是单元开头看板和临时分析互相拖累的原因。Lab 14 不使用查询级提示；第一步会在沙箱里确认 root 的会话变量为空，`SHOW PROPERTY` 显示的 `default_workload_group` 是 `normal`。
 
 ## 14.2 Workload Group 怎样划分并发、排队和内存边界？
 
@@ -305,7 +306,7 @@ BI 账号通过角色获得看板组的 `USAGE_PRIV`，再由管理员设置 `de
 
 ## 单元总结
 
-- 查询按会话变量 `workload_group`、账号属性 `default_workload_group`、`normal` 的顺序选组，没有配置时所有查询都落在 `normal`；
+- 查询按 `SET_VAR` 查询提示、会话变量 `workload_group`、账号属性 `default_workload_group`、`normal` 的顺序选组，没有配置时落在 `normal`；
 - `max_concurrency`、`max_queue_size` 和 `queue_timeout` 决定查询执行、排队还是被拒绝；`max_queue_size` 默认为 0，名额满了就直接拒绝；
 - 排队在每个 FE 上分别计算，内存和 CPU 上限在每个 BE 上生效，CPU 上限还依赖 BE 配置 cgroup；
 - 落到正确的组需要 `USAGE_PRIV` 和 `default_workload_group` 同时配置；`bypass_workload_group` 人人可设，只跳过排队，不是隔离边界；
@@ -314,7 +315,7 @@ BI 账号通过角色获得看板组的 `USAGE_PRIV`，再由管理员设置 `de
 
 ## 知识测验
 
-[Quiz 14](quiz14_resource_isolation.ipynb) 包含 5 道离线题目，检查选组顺序、执行排队与拒绝、BE 上的资源上限、路由与绕过排队，以及三种查询保护手段。
+[Quiz 14](quiz14_resource_isolation.ipynb) 包含 6 道情境题，检查选组顺序、执行排队与拒绝、Backend（BE）上的资源上限、路由与绕过排队、查询保护手段和资源回滚。
 
 ## 官方参考资料
 
