@@ -17,6 +17,21 @@ from dw_course import wwi
 
 
 class LearningFlowTest(unittest.TestCase):
+    def test_restore_session_reconnects_and_reapplies_sql_settings(self):
+        lab = runtime.WarehouseLab.__new__(runtime.WarehouseLab)
+        lab.database = "dw_course_l1_test"
+        lab.connection = Mock()
+        lab.execute = Mock()
+
+        lab.restore_session()
+
+        lab.connection.ping.assert_called_once_with(reconnect=True)
+        self.assertEqual(lab.execute.call_args_list, [
+            call("USE dw_course_l1_test"),
+            call("SET time_zone = '+08:00'"),
+            call("SET group_commit = 'off_mode'"),
+        ])
+
     def notebook_cells(self, module):
         path = next((ROOT / "level1" / module).glob("lab*.ipynb"))
         return {c["id"]: "".join(c["source"]) for c in json.loads(path.read_text())["cells"]}

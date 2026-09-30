@@ -63,6 +63,8 @@ def prepare_lakehouse(lab, *, start=False):
             ["docker", "inspect", "--format", "{{json .NetworkSettings.Networks}}", container], text=True))
         if NETWORK not in networks:
             _run(["docker", "network", "connect", NETWORK, container], progress)
+            # Attaching a network can invalidate an established host-port TCP connection.
+            lab.restore_session()
         progress.advance(4)
         client = boto3.client("s3", endpoint_url="http://127.0.0.1:51900",
                               aws_access_key_id=ACCESS_KEY, aws_secret_access_key=SECRET_KEY,
